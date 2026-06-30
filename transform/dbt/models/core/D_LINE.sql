@@ -1,0 +1,8 @@
+-- 시스템 라인 차원
+SELECT
+    STD_LINE_CD AS LINE_KEY,
+    STD_LINE_CD,
+    STD_LINE_CD AS STD_LINE_NM
+FROM (
+    SELECT DISTINCT STD_LINE_CD FROM {{ ref('S_EQP') }}
+) d

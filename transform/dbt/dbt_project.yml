@@ -1,0 +1,31 @@
+name: "pcs_dbt"
+version: "1.0.0"
+config-version: 2
+profile: "pcs_oracle"
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# 실행 결과를 PCS_CTL 로 적재 (관측)
+on-run-end: "{{ log_run_results_to_ctl() }}"
+
+# 폴더 = Medallion 계층. +schema 는 generate_schema_name 매크로로 '그대로' 적용됨.
+models:
+  pcs_dbt:
+    slv:
+      +schema: PCS_SLV
+      +materialized: table
+    core:
+      +schema: PCS_CORE
+      +materialized: table
+    gold:
+      +schema: PCS_GOLD
+      +materialized: table
+
+seeds:
+  pcs_dbt:
+    +schema: PCS_CORE

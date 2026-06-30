@@ -1,0 +1,51 @@
+-- =====================================================================
+-- 04_ctl_views.sql : 데이터 헬스 모니터링 뷰 (병목/끊김/건수급감 탐지)
+--   기존 Oracle 볼륨이 있으면 최초 init 에서 자동 실행 안 되므로 수동 적용:
+--   sqlplus system/oracle@localhost:1521/FREEPDB1 @/container-entrypoint-initdb.d/04_ctl_views.sql
+-- =====================================================================
+SET DEFINE OFF;
+
+-- (1) 최신성/끊김: 원천 워터마크 + dbt 모델 마지막 실행. 임계 초과 시 STALE
+CREATE OR REPLACE VIEW PCS_CTL.V_FRESHNESS AS
+SELECT 'SOURCE' AS LAYER,
+       SRC_OBJ  AS OBJECT_NM,
+       LAST_LOADED_TS AS LAST_TS,
+       ROUND((CAST(SYSTIMESTAMP AS DATE) - CAST(LAST_LOADED_TS AS DATE)) * 24, 2) AS HOURS_SINCE,
+       CASE WHEN LAST_LOADED_TS < SYSTIMESTAMP - INTERVAL '2' DAY THEN 'STALE' ELSE 'OK' END AS STATUS
+FROM PCS_CTL.C_SOURCE_WATERMARK
+UNION ALL
+SELECT 'MODEL',
+       TASK_ID,
+       MAX(END_TS),
+       ROUND((CAST(SYSTIMESTAMP AS DATE) - CAST(MAX(END_TS) AS DATE)) * 24, 2),
+       CASE WHEN MAX(END_TS) < SYSTIMESTAMP - INTERVAL '2' DAY THEN 'STALE' ELSE 'OK' END
+FROM PCS_CTL.C_JOB_RUN
+WHERE DAG_ID = 'dbt'
+GROUP BY TASK_ID;
+
+-- (2) 병목: 단계별 평균/최대 소요시간 (초)
+CREATE OR REPLACE VIEW PCS_CTL.V_BOTTLENECK AS
+SELECT DAG_ID,
+       TASK_ID,
+       COUNT(*) AS RUNS,
+       ROUND(AVG((CAST(END_TS AS DATE) - CAST(START_TS AS DATE)) * 86400), 2) AS AVG_SEC,
+       ROUND(MAX((CAST(END_TS AS DATE) - CAST(START_TS AS DATE)) * 86400), 2) AS MAX_SEC
+FROM PCS_CTL.C_JOB_RUN
+WHERE START_TS IS NOT NULL AND END_TS IS NOT NULL
+GROUP BY DAG_ID, TASK_ID;
+
+-- (3) 건수 급감/공백: 직전 5회 평균 대비 50% 미만이면 DROP, 0이면 EMPTY
+CREATE OR REPLACE VIEW PCS_CTL.V_VOLUME_ANOMALY AS
+SELECT RUN_ID, DAG_ID, TASK_ID, START_TS, ROW_CNT,
+       ROUND(AVG(ROW_CNT) OVER (PARTITION BY DAG_ID, TASK_ID ORDER BY START_TS
+              ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING), 1) AS TRAILING_AVG,
+       CASE
+         WHEN ROW_CNT = 0 THEN 'EMPTY'
+         WHEN ROW_CNT < 0.5 * AVG(ROW_CNT) OVER (PARTITION BY DAG_ID, TASK_ID ORDER BY START_TS
+              ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING) THEN 'DROP'
+         ELSE 'OK'
+       END AS FLAG
+FROM PCS_CTL.C_JOB_RUN
+WHERE ROW_CNT IS NOT NULL;
+
+EXIT;

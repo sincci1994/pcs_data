@@ -1,0 +1,15 @@
+logs/
+!logs/.gitkeep
+plugins/
+!plugins/.gitkeep
+transform/dbt/target/
+transform/dbt/dbt_packages/
+transform/dbt/logs/
+__pycache__/
+*.pyc
+.env
+
+# OpenMetadata: 데이터 볼륨(대용량) + 런타임 JWT 토큰 포함 인제스트 설정
+openmetadata/docker-volume/
+openmetadata/oracle_ingest.yaml
+openmetadata/dbt_ingest.yaml

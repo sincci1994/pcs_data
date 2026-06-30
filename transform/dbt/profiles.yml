@@ -1,0 +1,14 @@
+pcs_oracle:
+  target: dev
+  outputs:
+    dev:
+      type: oracle
+      user: DBT_EXEC
+      password: dbt_exec_pw
+      protocol: tcp
+      host: oracle           # docker compose 서비스명 (호스트 실행 시 localhost 로)
+      port: 1521
+      service: FREEPDB1
+      database: FREEPDB1
+      schema: DBT_EXEC        # 기본 스키마(미지정 모델). 계층 모델은 +schema 로 override
+      threads: 4
