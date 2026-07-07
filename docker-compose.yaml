@@ -20,17 +20,25 @@ x-airflow-common: &airflow-common
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "30"
     ORA_PYTHON_DRIVER_TYPE: thin
     # --- 데이터 파이프라인용 Oracle 커넥션 (Airflow OracleHook / SqlSensor 가 사용) ---
-    AIRFLOW_CONN_ORACLE_PCS: 'oracle://PCS_ETL:pcs_etl_pw@oracle:1521?service_name=FREEPDB1'
+    #     비밀번호는 .env 로 외부화(로컬 기본값 제공). 실배포는 .env / 시크릿매니저로 주입.
+    AIRFLOW_CONN_ORACLE_PCS: 'oracle://PCS_ETL:${PCS_ETL_PASSWORD:-pcs_etl_pw}@oracle:1521?service_name=FREEPDB1'
+    # --- dbt(Cosmos) 가 profiles.yml env_var() 로 읽는 자격증명 ---
+    PCS_DBT_USER: "${PCS_DBT_USER:-DBT_EXEC}"
+    PCS_DBT_PASSWORD: "${PCS_DBT_PASSWORD:-dbt_exec_pw}"
     # --- OpenLineage → Marquez (lineage + 런타임 헬스) ---
     AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"http","url":"http://marquez-api:5000","endpoint":"api/v1/lineage"}'
     AIRFLOW__OPENLINEAGE__NAMESPACE: 'pcs'
+  # 호스트 트리(사람용/역할 기반) ↔ 컨테이너 경로(기계용/관례) 번역계층.
+  # 컨테이너 안은 /opt/airflow/{dags,extract,common,transform,tools} 로 불변 →
+  # import 문자열·Cosmos 경로·PYTHONPATH 는 호스트 재편과 무관하게 유지된다.
   volumes:
-    - ./dags:/opt/airflow/dags
-    - ./common:/opt/airflow/common
+    - ./platform/dags:/opt/airflow/dags
+    - ./platform/extract:/opt/airflow/extract
+    - ./platform/common:/opt/airflow/common
     - ./transform:/opt/airflow/transform
-    - ./tools:/opt/airflow/tools
+    - ./dev/tools:/opt/airflow/tools
     - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
+    - ./platform/plugins:/opt/airflow/plugins
   depends_on:
     postgres:
       condition: service_healthy
@@ -54,13 +62,13 @@ services:
   oracle:
     image: gvenzl/oracle-free:23-slim
     environment:
-      ORACLE_PASSWORD: oracle          # SYS / SYSTEM 패스워드
+      ORACLE_PASSWORD: "${ORACLE_SYS_PASSWORD:-oracle}"   # SYS / SYSTEM 패스워드 (.env 외부화)
     ports:
       - "1521:1521"
     volumes:
       - oracle-db:/opt/oracle/oradata
       # 최초 기동 시 1회 실행되는 초기화 스크립트 (유저/스키마/권한/원천DDL)
-      - ./init:/container-entrypoint-initdb.d
+      - ./platform/infra/init:/container-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "healthcheck.sh"]
       interval: 15s

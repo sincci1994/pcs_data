@@ -1,7 +1,7 @@
 logs/
 !logs/.gitkeep
-plugins/
-!plugins/.gitkeep
+platform/plugins/
+!platform/plugins/.gitkeep
 transform/dbt/target/
 transform/dbt/dbt_packages/
 transform/dbt/logs/
@@ -10,6 +10,18 @@ __pycache__/
 .env
 
 # OpenMetadata: 데이터 볼륨(대용량) + 런타임 JWT 토큰 포함 인제스트 설정
-openmetadata/docker-volume/
-openmetadata/oracle_ingest.yaml
-openmetadata/dbt_ingest.yaml
+platform/infra/openmetadata/docker-volume/
+platform/infra/openmetadata/oracle_ingest.yaml
+platform/infra/openmetadata/dbt_ingest.yaml
+
+# 파이썬 패키징/툴링 산출물
+.venv/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Agent 임시 작업물 (폴더/안내는 유지, 내용은 무시)
+workspace/temp/*
+!workspace/temp/.gitkeep
+!workspace/temp/README.md

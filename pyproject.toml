@@ -1,0 +1,19 @@
+# 주의: 이 파일은 lint/format 설정 전용이다. 배포 패키징(빌드/휠) 용도가 아니다.
+# 첫party 코드(platform/{extract,common}, transform/)는 PYTHONPATH-루트로 import 하며
+# (폐쇄망 전략), 설치형 패키지를 만들지 않는다. 근거: design/adr/0003-airgap-packaging.md
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["transform/dbt/target", "logs", "platform/infra/openmetadata/docker-volume"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["dev/tests"]
+addopts = "-q"

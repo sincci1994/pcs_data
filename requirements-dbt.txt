@@ -1,0 +1,5 @@
+# dbt 전용 격리 venv 의존성 (Dockerfile 이 /opt/airflow/dbt_venv 에 설치).
+# Airflow 메인 환경과 의존성 충돌을 피하려 분리한다. Cosmos 가 이 venv 의 dbt 를 호출.
+# 폐쇄망: 완전 핀 + 사내 인덱스(PIP_INDEX_URL) 경유. docs/08_AIRGAP_BUILD.md 참고.
+dbt-oracle==1.8.4
+dbt-core>=1.8,<1.9

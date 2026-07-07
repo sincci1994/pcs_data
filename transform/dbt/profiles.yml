@@ -3,8 +3,8 @@ pcs_oracle:
   outputs:
     dev:
       type: oracle
-      user: DBT_EXEC
-      password: dbt_exec_pw
+      user: "{{ env_var('PCS_DBT_USER', 'DBT_EXEC') }}"
+      password: "{{ env_var('PCS_DBT_PASSWORD', 'dbt_exec_pw') }}"
       protocol: tcp
       host: oracle           # docker compose 서비스명 (호스트 실행 시 localhost 로)
       port: 1521
