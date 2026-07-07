@@ -9,6 +9,11 @@ __pycache__/
 *.pyc
 .env
 
+# 사내 사설 CA (환경별 산출물 — 실파일 커밋 금지, 폴더/안내는 유지)
+certs/*
+!certs/.gitkeep
+!certs/README.md
+
 # OpenMetadata: 데이터 볼륨(대용량) + 런타임 JWT 토큰 포함 인제스트 설정
 platform/infra/openmetadata/docker-volume/
 platform/infra/openmetadata/oracle_ingest.yaml

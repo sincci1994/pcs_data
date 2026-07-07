@@ -5,6 +5,7 @@
 ## 서드파티 의존성
 - `requirements.txt` / `requirements-dbt.txt` **완전 핀**(가능하면 해시 고정, `pip install --require-hashes`).
 - Docker 빌드: `PIP_INDEX_URL`/`PIP_EXTRA_INDEX_URL`(사내 Nexus/Artifactory 미러) + `HTTP(S)_PROXY` 빌드 인자.
+- **프록시·미러·사설 CA 는 최상위 `.env` + `certs/` 로 관리** → docker-compose `build.args` 로 이미지에 주입(빌드 시점 한정, 빈값이면 no-op). 사설 CA `.crt` 는 `certs/` 에 두면 빌드가 트러스트스토어 등록. → [.env.example](../.env.example) · [certs/README.md](../certs/README.md)
 - dbt 패키지 허브 접근 불가 가정 → `packages.yml` 의존성은 벤더링하거나 회피.
 
 ## 첫party 코드

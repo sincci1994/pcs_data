@@ -8,7 +8,15 @@
 # Oracle: localhost:1521  service_name=FREEPDB1  (SYSTEM / oracle)
 
 x-airflow-common: &airflow-common
-  build: .
+  build:
+    context: .
+    # 사내 프록시/미러/CA — 최상위 .env 값을 빌드 인자로 주입(빈값이면 no-op). 런타임엔 미주입.
+    args:
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-}
+      PIP_INDEX_URL: ${PIP_INDEX_URL:-}
+      PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL:-}
   image: pcs-airflow-practice:latest
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
