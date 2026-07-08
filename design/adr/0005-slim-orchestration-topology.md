@@ -13,7 +13,7 @@
    - 테이블/컬럼 계보 → OpenMetadata dbt ingestion
    - 파이프라인 실행 상태 → Airflow UI (+ 필요 시 OM Airflow 커넥터)
    - 병목·신선도·볼륨 → CTL 헬스뷰(`V_FRESHNESS`/`V_BOTTLENECK`/`V_VOLUME_ANOMALY`)
-4. **OpenMetadata 스택(5서비스)은 루트 compose 에 `include`** — 별도 기동이 아니라 `docker compose up -d --build` 한 번에 코어(빌드)와 함께 준비·기동된다. 근거: 폐쇄망 반입이 단일 명령 + 단일 이미지 번들(`platform/infra/ops/airgap_images.sh`)로 끝난다. (OM 파일 자체는 그대로 — standalone 기동도 가능.)
+4. **OpenMetadata 스택(5서비스)은 `.env` 의 `COMPOSE_FILE` 로 루트에 병합** — 별도 기동이 아니라 `docker compose up -d --build` 한 번에 코어(빌드)와 함께 준비·기동된다. 근거: 폐쇄망 반입이 단일 명령 + 단일 이미지 번들(`platform/infra/ops/airgap_images.sh`)로 끝난다. `include:` 대신 `COMPOSE_FILE` 병합을 쓰는 이유는 구버전 Compose(<v2.20, `include` 미지원) 호환. (OM 파일 자체는 그대로 — standalone 기동도 가능.)
 5. **로컬 Oracle 제거**: 개발 환경도 외부 Oracle(`.env` `PCS_ORACLE_*`)에 접속한다. dev 오버레이 없이 단일 `up` 경로. SCADA 샘플 원천 DDL·목데이터(`platform/infra/init`·`dev/tools`)는 어떤 compose 에도 배선되지 않는 참조물로만 잔존 — design/09 정착 시 폴더째 삭제.
 
 ## 근거
@@ -24,4 +24,4 @@
 ## 결과/주의
 - 재도입 경로: 런 단위 계보가 필요해지면 marquez 3서비스 + `AIRFLOW__OPENLINEAGE__TRANSPORT` env 복원이면 끝(openlineage provider 핀은 requirements.txt 에 유지 중).
 - 운영 기동에는 `.env` 의 외부 DB 접속값이 필수 — 비면 커넥션 사용 시점에 실패한다(파싱은 통과).
-- 컨테이너 개수 기대값(단일 프로젝트, include): 실행 7(코어 3 + OM 4) + exited 2(airflow-init·execute-migrate-all). 이보다 많으면 레포 밖 잔여물 — 진단 명령은 README "컨테이너 구성" 절.
+- 컨테이너 개수 기대값(단일 프로젝트, COMPOSE_FILE 병합): 실행 7(코어 3 + OM 4) + exited 2(airflow-init·execute-migrate-all). 이보다 많으면 레포 밖 잔여물 — 진단 명령은 README "컨테이너 구성" 절.

@@ -2,7 +2,7 @@
 
 ## `airgap_images.sh` — 폐쇄망 이미지 반입 (레지스트리 없음)
 
-프록시 서버에서 빌드/pull 한 이미지를 `docker save` 타볼로 묶어, 파일로 폐쇄망 타겟에 옮겨 `docker load` 한다. 루트 compose 가 OM 을 include 하므로 코어(빌드)·OM(pull) **6종이 한 번에** 번들된다.
+프록시 서버에서 빌드/pull 한 이미지를 `docker save` 타볼로 묶어, 파일로 폐쇄망 타겟에 옮겨 `docker load` 한다. `.env` 의 `COMPOSE_FILE` 이 OM 을 병합하므로 코어(빌드)·OM(pull) **6종이 한 번에** 번들된다.
 
 | 이미지 | 출처 |
 |---|---|
@@ -28,7 +28,8 @@ docker compose up -d                           # ★ --build 금지 (로드된 �
 ### 주의
 - **아키텍처 일치**: 프록시 빌드 서버 == 타겟(대개 `linux/amd64`). 다르면 빌드/pull 에 `--platform linux/amd64`.
 - **타겟은 빌드/네트워크 없음**: 로드된 이미지가 이미 있으므로 `docker compose up -d`. `--build`·`--pull always` 를 붙이면 폐쇄망에서 실패.
-- **Compose v2.20+** (루트의 `include:` 요구).
+- **OM 병합 전제**: `.env` 의 `COMPOSE_FILE` 이 코어+OM 을 병합한다(구버전 Compose 도 지원). 이게 없으면 이 스크립트는 코어 이미지만 잡는다.
+- **구버전 Compose 호환**: 빌드 프록시 서버가 Compose v2.5 라 신형 전용 플래그(`config --images`·`pull --ignore-buildable`)를 안 쓴다 — config 파싱 + `docker pull` 로 동작. 타겟(v2.29.1)도 동일 동작.
 - **OM 로드 후 1회 셋업**: 볼륨은 빈 상태로 시작 → JWT 재발급·`oracle_ingest.yaml`·도메인 스크립트 재수행 필요. → [openmetadata/README](../openmetadata/README.md)
 - **Oracle Thick 클라이언트**는 이미지 빌드 시 베이크(별개). → [design/08](../../../design/08_AIRGAP_BUILD.md)
 

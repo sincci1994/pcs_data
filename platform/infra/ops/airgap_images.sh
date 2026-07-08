@@ -6,14 +6,20 @@
 #   타겟 서버:    ./airgap_images.sh load     # docker load ← dist/pcs-images.tgz
 #   어디서나:     ./airgap_images.sh list     # 반입 대상 이미지 목록만 출력
 #
-# 이미지 목록은 루트 compose(=OM include 포함)에서 `docker compose config --images`
-# 로 산출한다 → 버전 하드코딩/드리프트 없음. save/load 는 태그를 원형 보존하므로
-# 타겟에서는 `docker compose up -d`(빌드/네트워크 없이)가 로컬 이미지를 그대로 쓴다.
+# 이미지 목록은 루트 compose(=.env COMPOSE_FILE 로 OM 병합)의 렌더된 config 에서 파싱한다
+# → 버전 하드코딩/드리프트 없음. save/load 는 태그를 원형 보존하므로 타겟에서는
+# `docker compose up -d`(빌드/네트워크 없이)가 로컬 이미지를 그대로 쓴다.
+#
+# 구버전 Compose 호환(빌드 프록시 서버가 v2.5): 신형 전용 플래그를 쓰지 않는다 —
+# `config --images`(v2.21+)·`pull --ignore-buildable`(v2.15+) 대신 config 파싱 + docker pull.
 #
 # 주의:
+#  - .env 에 COMPOSE_FILE 이 있어야 OM 이미지까지 목록에 잡힌다(없으면 코어만).
 #  - 프록시 빌드 서버와 타겟의 CPU 아키텍처가 같아야 한다(대개 linux/amd64).
 #  - 타겟 기동엔 --build/--pull 금지(로드된 이미지 사용). 런타임 프록시 불필요.
 set -euo pipefail
+
+BUILT_IMAGE="pcs-airflow-practice:latest"   # 로컬 빌드 이미지(=pull 대상 아님)
 
 # 레포 루트로 이동 (이 스크립트는 platform/infra/ops/ 에 있다)
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -23,17 +29,26 @@ DIST="$ROOT/dist"
 TARBALL="$DIST/pcs-images.tgz"
 MANIFEST="$DIST/manifest.txt"
 
-images() { docker compose config --images | sort -u; }
+# 렌더된 config 에서 image: 값만 뽑는다 (config --images 없이 — v2.5 호환)
+images() {
+  docker compose config \
+    | grep -E '^[[:space:]]+image:[[:space:]]' \
+    | sed -E 's/^[[:space:]]+image:[[:space:]]*//' | tr -d '"' | sort -u
+}
 
 cmd_list() { images; }
 
 cmd_save() {
   mkdir -p "$DIST"
-  echo ">> 코어 빌드 + OM pull (프록시 필요, 컨테이너는 안 띄움) ..."
-  docker compose build                       # build: 있는 서비스 → pcs-airflow-practice:latest
-  docker compose pull --ignore-buildable     # image: 전용 서비스만 pull (빌드 이미지 제외)
-
   local imgs; imgs="$(images)"
+  echo ">> 코어 빌드 (프록시 필요) ..."
+  docker compose build                       # build: 있는 서비스 → pcs-airflow-practice:latest
+  echo ">> 업스트림 이미지 pull ..."
+  for img in $imgs; do
+    [ "$img" = "$BUILT_IMAGE" ] && continue   # 로컬 빌드 이미지는 pull 대상 아님
+    docker pull "$img"
+  done
+
   echo ">> 반입 대상 이미지:"; echo "$imgs" | sed 's/^/   - /'
 
   echo ">> manifest 기록 → $MANIFEST"

@@ -14,20 +14,20 @@ PCS Data Product 의 **Airflow 기반 오케스트레이션 서버** 레포. 이
               └────┬──────────────────────────┬───┘
 외부 Oracle(소스) ──►│  추출  ──► 외부 Postgres [LND] ─► [SLV→CORE→GOLD]
                     └────────── [CTL] 통제/관측 ◄──────────┘
-카탈로그: OpenMetadata (루트 compose 에 include — 함께 기동)
+카탈로그: OpenMetadata (.env COMPOSE_FILE 로 병합 — 함께 기동)
 ```
 
 ## 컨테이너 구성 (이 서버에서 뜨는 것)
 
-루트 `docker compose up -d --build` 하나로 아래가 **한 프로젝트**로 뜬다 (OM 은 `include`, → [adr/0005](design/adr/0005-slim-orchestration-topology.md)):
+`.env` 에 `COMPOSE_FILE`(→ [.env.example](.env.example))을 두면 `docker compose up -d --build` 하나로 아래가 **한 프로젝트**로 뜬다 (OM 병합, → [adr/0005](design/adr/0005-slim-orchestration-topology.md)):
 
 | 스택 | 서비스 | 실행 중 개수 |
 |---|---|---|
 | 코어 (`docker-compose.yaml`) | postgres(Airflow 메타DB)·airflow-webserver·airflow-scheduler (+airflow-init 1회성) | **3** |
-| OpenMetadata (`include`) | mysql·elasticsearch·openmetadata-server·ingestion (+execute-migrate-all 1회성) | **4** |
+| OpenMetadata (COMPOSE_FILE 병합) | mysql·elasticsearch·openmetadata-server·ingestion (+execute-migrate-all 1회성) | **4** |
 | | **합계 실행** | **7** (+1회성 2) |
 
-> **dbt 는 별도 컨테이너가 아니다** — Airflow 이미지에 내장(`Dockerfile` dbt 전용 venv)돼 Cosmos 가 Task 로 실행한다. **OpenMetadata 는 코어는 아니지만** `include` 로 함께 뜬다(무거움: ES 힙 1GB+).
+> **dbt 는 별도 컨테이너가 아니다** — Airflow 이미지에 내장(`Dockerfile` dbt 전용 venv)돼 Cosmos 가 Task 로 실행한다. **OpenMetadata 는 코어는 아니지만** `COMPOSE_FILE` 병합으로 함께 뜬다(무거움: ES 힙 1GB+). `include:` 대신 `COMPOSE_FILE` 을 쓰는 이유는 구버전 Compose(<v2.20) 호환.
 
 > 이보다 컨테이너가 많이 보이면 이 레포 밖의 잔여물이다. 진단:
 > ```bash
@@ -51,10 +51,11 @@ PCS Data Product 의 **Airflow 기반 오케스트레이션 서버** 레포. 이
 코어 이미지(`pcs-airflow-practice:latest`, 베이스 `apache/airflow:2.9.3-python3.11`)를 빌드하고 OM 4종은 pull 하여 한 프로젝트로 띄운다. 코어 빌드 단계는 `Dockerfile` 참조: ① 사설 CA(`certs/*.crt`) 등록 → ② dbt-oracle 전용 venv(`/opt/airflow/dbt_venv`, Cosmos 가 호출) → ③ Airflow 패키지(`requirements.txt`) → ④ `PYTHONPATH=/opt/airflow` 루트 import → ⑤ oracledb 드라이버 모드(기본 `thin`).
 
 ```bash
-cp .env.example .env          # 외부 PCS_ORACLE_* / PCS_WH_* · OM JWT 채우기 (데이터 DB는 전부 외부 서버)
-docker compose up -d --build  # 코어 빌드 + OM pull → 실행 7 (+init·migrate 1회)
+cp .env.example .env          # COMPOSE_FILE(OM 병합)·외부 PCS_ORACLE_* / PCS_WH_* · OM JWT 채우기
+docker compose up -d --build  # COMPOSE_FILE 로 코어 빌드 + OM pull → 실행 7 (+init·migrate 1회)
 # UI: http://localhost:8080 (airflow) · http://localhost:8585 (OpenMetadata)
 ```
+> `.env` 의 `COMPOSE_FILE` 이 OM 을 병합한다(구분자 Linux `:` / Windows `;`). 없으면 코어만 뜬다.
 
 - **사내망 빌드**: 프록시(`HTTP(S)_PROXY`/`NO_PROXY`)·pip 미러(`PIP_INDEX_URL`/`PIP_EXTRA_INDEX_URL`)·사설 CA(`certs/*.crt`)를 `.env` 로 주입 — 빌드 시점에만 적용(런타임 미주입, `docker history` 미노출). 집 환경은 전부 비우면 no-op. → [design/08](design/08_AIRGAP_BUILD.md)
 - **폐쇄망 반입**(레지스트리 없음): 프록시 서버에서 위 이미지 6종을 `docker save` 번들로 묶어 타겟에 옮겨 `docker load` → `platform/infra/ops/airgap_images.sh` ([런북](platform/infra/ops/README.md)). 타겟은 `docker compose up -d`(**--build 금지**).

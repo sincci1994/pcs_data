@@ -13,13 +13,13 @@ OpenMetadata(OM)는 **기술 계보**(테이블/컬럼, dbt ingestion) 위에 **
 | `dbt_ingest.yaml` | dbt 인제스트 설정(생성됨, 참고용) |
 
 ## 왜 이렇게 (개념)
-- **루트에 include**: OM 스택은 무겁지만 폐쇄망 반입을 단일 명령·단일 이미지 번들로 끝내기 위해 루트 compose 가 이 파일을 `include` 한다 → `docker compose up -d --build` 에 함께 뜬다([adr/0005](../../../design/adr/0005-slim-orchestration-topology.md)). 이 파일 자체는 그대로라 standalone 기동도 가능.
+- **루트에 병합**: OM 스택은 무겁지만 폐쇄망 반입을 단일 명령·단일 이미지 번들로 끝내기 위해, 루트가 `.env` 의 `COMPOSE_FILE` 로 이 파일을 병합한다 → `docker compose up -d --build` 에 함께 뜬다([adr/0005](../../../design/adr/0005-slim-orchestration-topology.md)). `include:` 대신 `COMPOSE_FILE` 은 구버전 Compose(<v2.20) 호환. 이 파일 자체는 그대로라 standalone 기동도 가능.
 - **Oracle 인제스트 호스트**: 외부 Oracle 실서버 주소(`PCS_ORACLE_HOST`)로 직접 붙는다. OM 컨테이너에서 도달 가능한 주소여야 한다(사내 DNS/IP). 로컬 Oracle 컨테이너는 없다.
 - **도메인 = 비즈니스 해석**: 인제스트된 테이블(기술적)에 7도메인(업무적)을 입혀, 카탈로그를 "업무 언어"로 탐색하게 만든다.
 - **lineage는 직접 PUT**: dbt 자동 매칭이 대소문자 문제로 실패해서(아래 이슈), manifest의 `depends_on`을 읽어 OM 테이블 간 엣지를 API로 직접 만들었다.
 
 ## 사용/실행법
-서버 기동은 루트 `docker compose up -d --build` 에 포함된다(include). 아래는 **기동 후 1회 카탈로그 셋업** — 에어갭 `docker load` 반입 직후(볼륨 빈 상태)에도 동일하게 재수행한다.
+서버 기동은 루트 `docker compose up -d --build` 에 병합된다(`.env` COMPOSE_FILE). 아래는 **기동 후 1회 카탈로그 셋업** — 에어갭 `docker load` 반입 직후(볼륨 빈 상태)에도 동일하게 재수행한다.
 ```bash
 curl localhost:8585/api/v1/system/version              # 서버 준비 확인 (루트 up 으로 이미 기동됨)
 

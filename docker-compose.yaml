@@ -1,17 +1,13 @@
-# PCS 오케스트레이션 서버 — Airflow(+dbt/Cosmos) 코어 + OpenMetadata(include)
+# PCS 오케스트레이션 서버 — Airflow(+dbt/Cosmos) 코어 + OpenMetadata
 #  - postgres : Airflow 메타DB (인프라용. 데이터 아님 — 로컬 자급자족)
 #  - airflow  : webserver + scheduler (LocalExecutor → worker/redis 불필요)
 #  - 데이터 DB는 전부 외부 서버: 소스 Oracle·웨어하우스 Postgres 접속은 .env 로 주입
-#  - 카탈로그(OpenMetadata)는 include 로 함께 기동: platform/infra/openmetadata/  → adr/0005
+#  - 카탈로그(OpenMetadata)는 .env 의 COMPOSE_FILE 로 함께 병합·기동: platform/infra/openmetadata/  → adr/0005
+#    (include: 는 Compose v2.20+ 전용이라 구버전 호환 위해 COMPOSE_FILE 병합을 쓴다.)
 #
 # 기동:  docker compose up -d --build   → 실행 7(코어 3 + OM 4) + 1회성 2(airflow-init·execute-migrate-all)
-#        코어는 빌드, OM 4종은 pull. 에어갭 반입: platform/infra/ops/airgap_images.sh
+#        전제: .env 에 COMPOSE_FILE 세팅(→ .env.example). 코어는 빌드, OM 4종은 pull.
 # UI:    http://localhost:8080 (airflow / airflow) · http://localhost:8585 (OpenMetadata)
-
-# OM 스택(mysql·elasticsearch·server·ingestion)을 YAML 복붙 없이 그대로 합류시킨다.
-# OM 의 상대경로/네트워크(app_net)는 그 파일 기준으로 해석된다(standalone 과 동일). → Compose v2.20+
-include:
-  - platform/infra/openmetadata/docker-compose.yml
 
 x-airflow-common: &airflow-common
   build:
