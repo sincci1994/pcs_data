@@ -29,6 +29,6 @@
 - DAG이 안 보이면: Airflow safe_mode는 파일에 "airflow"+"dag" 문자열이 둘 다 있어야 파싱한다.
 - `docker compose exec`에 `/opt/...` 절대경로를 넘길 때 Windows Git-Bash는 `MSYS_NO_PATHCONV=1` 접두.
 - 추출/변환 DAG은 같은 logical date로 트리거해야 `ExternalTaskSensor`가 매칭된다.
-- Cosmos는 LOCAL 실행모드(`dbt_executable_path`)에서만 OpenLineage 이벤트를 emit한다.
+- Cosmos는 LOCAL 실행모드(`dbt_executable_path`)에서만 OpenLineage 이벤트를 emit한다 — 단, 현재 OpenLineage 는 전역 비활성(`AIRFLOW__OPENLINEAGE__DISABLED`, → adr/0005). 계보는 OM dbt ingestion 이 담당.
 
 상세 설계: [design/04](../design/04_EXTRACT_LAYER.md) · [design/06](../design/06_COMMON_LAYER.md) · 기준 시나리오: [design/09](../design/09_SCENARIO_UTILITY_USAGE.md)

@@ -4,7 +4,7 @@
 | 계층 | 도구 | 답하는 질문 |
 |---|---|---|
 | 자체 메트릭 | `PCS_CTL` 스키마 + 뷰 | 신선도/병목/이상 적재량 |
-| 계보 | OpenLineage → Marquez | 어떤 Task 가 무엇을 읽고 썼나 |
+| 계보 | OpenMetadata (dbt ingestion) | 어떤 테이블이 어디서 오나 (Marquez 제거 → [adr/0005](adr/0005-slim-orchestration-topology.md)) |
 | 카탈로그 | OpenMetadata | 데이터 프로덕트/오너/문서 |
 
 ## PCS_CTL 테이블·뷰

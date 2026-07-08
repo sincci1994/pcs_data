@@ -1,11 +1,17 @@
-# 집 연습용 데이터 파이프라인
-#  - oracle  : 데이터 계층 전부 (SRC_SCADA / PCS_LND..GOLD / PCS_CTL)  ← "Oracle 단일"
-#  - postgres: Airflow 메타DB (인프라용. 데이터 아님)
-#  - airflow : webserver + scheduler (LocalExecutor → worker/redis 불필요)
+# PCS 오케스트레이션 서버 — Airflow(+dbt/Cosmos) 코어 + OpenMetadata(include)
+#  - postgres : Airflow 메타DB (인프라용. 데이터 아님 — 로컬 자급자족)
+#  - airflow  : webserver + scheduler (LocalExecutor → worker/redis 불필요)
+#  - 데이터 DB는 전부 외부 서버: 소스 Oracle·웨어하우스 Postgres 접속은 .env 로 주입
+#  - 카탈로그(OpenMetadata)는 include 로 함께 기동: platform/infra/openmetadata/  → adr/0005
 #
-# 기동:  docker compose up -d --build
-# UI:    http://localhost:8080   (airflow / airflow)
-# Oracle: localhost:1521  service_name=FREEPDB1  (SYSTEM / oracle)
+# 기동:  docker compose up -d --build   → 실행 7(코어 3 + OM 4) + 1회성 2(airflow-init·execute-migrate-all)
+#        코어는 빌드, OM 4종은 pull. 에어갭 반입: platform/infra/ops/airgap_images.sh
+# UI:    http://localhost:8080 (airflow / airflow) · http://localhost:8585 (OpenMetadata)
+
+# OM 스택(mysql·elasticsearch·server·ingestion)을 YAML 복붙 없이 그대로 합류시킨다.
+# OM 의 상대경로/네트워크(app_net)는 그 파일 기준으로 해석된다(standalone 과 동일). → Compose v2.20+
+include:
+  - platform/infra/openmetadata/docker-compose.yml
 
 x-airflow-common: &airflow-common
   build:
@@ -27,15 +33,15 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAG_FILE_PROCESSOR_TIMEOUT: "120"
     AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "30"
     ORA_PYTHON_DRIVER_TYPE: thin
-    # --- 데이터 파이프라인용 Oracle 커넥션 (Airflow OracleHook / SqlSensor 가 사용) ---
-    #     비밀번호는 .env 로 외부화(로컬 기본값 제공). 실배포는 .env / 시크릿매니저로 주입.
-    AIRFLOW_CONN_ORACLE_PCS: 'oracle://PCS_ETL:${PCS_ETL_PASSWORD:-pcs_etl_pw}@oracle:1521?service_name=FREEPDB1'
+    # --- 소스 Oracle 커넥션 (외부 DB 서버 필수 — 호스트/포트/서비스는 .env 로 주입) ---
+    AIRFLOW_CONN_ORACLE_PCS: 'oracle://PCS_ETL:${PCS_ETL_PASSWORD:-pcs_etl_pw}@${PCS_ORACLE_HOST}:${PCS_ORACLE_PORT:-1521}?service_name=${PCS_ORACLE_SERVICE:-FREEPDB1}'
+    # --- 웨어하우스 Postgres 커넥션 (외부 DB 서버, design/09 — LND~GOLD·CTL) ---
+    AIRFLOW_CONN_POSTGRES_WH: 'postgresql://${PCS_WH_USER:-pcs_wh}:${PCS_WH_PASSWORD:-}@${PCS_WH_HOST:-}:${PCS_WH_PORT:-5432}/${PCS_WH_DB:-pcs_wh}'
     # --- dbt(Cosmos) 가 profiles.yml env_var() 로 읽는 자격증명 ---
     PCS_DBT_USER: "${PCS_DBT_USER:-DBT_EXEC}"
     PCS_DBT_PASSWORD: "${PCS_DBT_PASSWORD:-dbt_exec_pw}"
-    # --- OpenLineage → Marquez (lineage + 런타임 헬스) ---
-    AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type":"http","url":"http://marquez-api:5000","endpoint":"api/v1/lineage"}'
-    AIRFLOW__OPENLINEAGE__NAMESPACE: 'pcs'
+    # OpenLineage 비활성 — 계보·카탈로그는 OpenMetadata(dbt ingestion)로 일원화. → adr/0005
+    AIRFLOW__OPENLINEAGE__DISABLED: "true"
   # 호스트 트리(사람용/역할 기반) ↔ 컨테이너 경로(기계용/관례) 번역계층.
   # 컨테이너 안은 /opt/airflow/{dags,extract,common,transform,tools} 로 불변 →
   # import 문자열·Cosmos 경로·PYTHONPATH 는 호스트 재편과 무관하게 유지된다.
@@ -49,8 +55,6 @@ x-airflow-common: &airflow-common
     - ./platform/plugins:/opt/airflow/plugins
   depends_on:
     postgres:
-      condition: service_healthy
-    oracle:
       condition: service_healthy
 
 services:
@@ -66,67 +70,6 @@ services:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
       retries: 5
-
-  oracle:
-    image: gvenzl/oracle-free:23-slim
-    environment:
-      ORACLE_PASSWORD: "${ORACLE_SYS_PASSWORD:-oracle}"   # SYS / SYSTEM 패스워드 (.env 외부화)
-    ports:
-      - "1521:1521"
-    volumes:
-      - oracle-db:/opt/oracle/oradata
-      # 최초 기동 시 1회 실행되는 초기화 스크립트 (유저/스키마/권한/원천DDL)
-      - ./platform/infra/init:/container-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD", "healthcheck.sh"]
-      interval: 15s
-      timeout: 10s
-      retries: 20
-      start_period: 90s
-
-  # ---------- Marquez (OpenLineage 백엔드 + UI) ----------
-  marquez-db:
-    image: postgres:14
-    environment:
-      POSTGRES_USER: marquez
-      POSTGRES_PASSWORD: marquez
-      POSTGRES_DB: marquez
-    volumes:
-      - marquez-db:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "marquez"]
-      interval: 10s
-      retries: 5
-
-  marquez-api:
-    image: marquezproject/marquez:0.50.0
-    ports:
-      - "5000:5000"   # OpenLineage API (이벤트 수신)
-      - "5001:5001"   # admin/healthcheck
-    environment:
-      - MARQUEZ_PORT=5000
-      - MARQUEZ_ADMIN_PORT=5001
-      - POSTGRES_HOST=marquez-db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=marquez
-      - POSTGRES_USER=marquez
-      - POSTGRES_PASSWORD=marquez
-    depends_on:
-      marquez-db:
-        condition: service_healthy
-    restart: on-failure
-
-  marquez-web:
-    image: marquezproject/marquez-web:0.50.0
-    ports:
-      - "3000:3000"   # 브라우저 UI
-    environment:
-      - MARQUEZ_HOST=marquez-api
-      - MARQUEZ_PORT=5000
-      - WEB_PORT=3000
-    depends_on:
-      - marquez-api
-    restart: on-failure
 
   airflow-init:
     <<: *airflow-common
@@ -165,5 +108,3 @@ services:
 
 volumes:
   postgres-db:
-  oracle-db:
-  marquez-db:

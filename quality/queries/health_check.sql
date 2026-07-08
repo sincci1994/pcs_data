@@ -1,6 +1,6 @@
 -- 일상 헬스 점검 (PCS_CTL) — quality/runbook.md 의 ① 절차
--- 실행 예: docker compose exec -T oracle bash -lc \
---   "sqlplus -s system/oracle@localhost:1521/FREEPDB1 @/dev/stdin" < quality/queries/health_check.sql
+-- 실행 예(외부 Oracle 에 직접):
+--   sqlplus -s <user>/<pw>@<PCS_ORACLE_HOST>:1521/<service> @quality/queries/health_check.sql
 
 -- 1) 최신성/끊김: STALE 이 있으면 조치
 SELECT * FROM PCS_CTL.V_FRESHNESS ORDER BY STATUS DESC, HOURS_SINCE DESC;

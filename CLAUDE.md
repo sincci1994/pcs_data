@@ -1,6 +1,7 @@
 # CLAUDE.md — PCS 파이프라인 (START HERE)
 
-PCS 설비 데이터 거버넌스 파이프라인 연습 레포. Oracle(소스) + Airflow + dbt(Cosmos) + 관측성.
+PCS 설비 데이터 거버넌스 파이프라인의 **오케스트레이션 서버** 레포 — Airflow + dbt(Cosmos) + OpenMetadata 카탈로그.
+데이터 DB(소스 Oracle·웨어하우스 Postgres)는 **외부 DB 서버** — 이 서버는 오케스트레이션·메타데이터만 켠다. → [adr/0005](design/adr/0005-slim-orchestration-topology.md)
 목적: 담당자마다 다른 지표 정의를 SQL 중심 + 문서 기반으로 표준화.
 
 > **첫 번째 데이터 제품**: [design/09_SCENARIO_UTILITY_USAGE.md](design/09_SCENARIO_UTILITY_USAGE.md) — Oracle 5분 Parameter → Postgres 적재 → 설비별 일별 Utility 사용량. 샘플 재작성의 기준이며, 시나리오는 필요 시 09, 10…으로 추가된다. 현재 코드는 이전 SCADA 샘플의 척추(참조용)다.
@@ -12,7 +13,7 @@ PCS 설비 데이터 거버넌스 파이프라인 연습 레포. Oracle(소스) 
 | `governance/` | 용어집·도메인 — **정의의 원천** | 도메인 전문가 |
 | `transform/` | SQL 변환(dbt: SLV→CORE→GOLD) | 리소스 담당자 |
 | `platform/` | dags(오케스트레이션)·extract(수집)·common(커넥터)·infra(배포) | 시스템 담당자 |
-| `quality/` | 헬스 런북·점검 쿼리 (CTL 뷰·dbt test·Marquez/OM) | 품질·모니터링 |
+| `quality/` | 헬스 런북·점검 쿼리 (CTL 뷰·dbt test·OpenMetadata) | 품질·모니터링 |
 | `workspace/` | instructions(지시)·pdca(계획/결과)·patterns·mistakes | 전원 + Agent |
 | `design/` | 설계문서(00~09)·ADR·로드맵 | 설계/아키텍처 |
 | `dev/` | tools(목데이터)·tests(pytest) | 개발 |

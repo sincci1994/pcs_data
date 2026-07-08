@@ -9,7 +9,7 @@
 | `governance/` | 🧭 도메인 전문가 | 용어집·도메인 — **정의의 원천** (컬럼 설명은 dbt schema.yml로 일원화) |
 | `transform/` | 🔧 리소스 담당자 | SQL 변환(dbt). 향후 `transform/<engine>/` 확장 |
 | `platform/` | ⚙️ 시스템 담당자 | `dags/`(오케스트레이션)·`extract/`(수집)·`common/`(커넥터)·`infra/`(배포) |
-| `quality/` | 📊 품질·모니터링 | 헬스 런북·점검 쿼리 (CTL 뷰·DQ·Marquez/OM) |
+| `quality/` | 📊 품질·모니터링 | 헬스 런북·점검 쿼리 (CTL 뷰·DQ·OpenMetadata) |
 | `workspace/` | 🤝 전원 + Agent | instructions(지시)·pdca(계획/결과)·patterns·mistakes |
 | `design/` | 📐 설계 | 설계문서·ADR·기획서·로드맵 |
 | `dev/` | 개발 | tools(목데이터)·tests(pytest) |

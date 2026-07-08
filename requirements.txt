@@ -11,7 +11,8 @@ apache-airflow-providers-common-sql==1.14.0
 # dbt 모델을 Airflow Task로 자동 렌더링 (.sql 추가 → Task 자동 생성)
 astronomer-cosmos==1.5.1
 
-# OpenLineage → Marquez (데이터 플로우/런타임 헬스). Cosmos가 dbt artifacts를 파싱해 emit
+# OpenLineage — 현재 비활성(AIRFLOW__OPENLINEAGE__DISABLED=true, → adr/0005).
+# 런 단위 계보 백엔드 재도입 시를 위해 핀 유지. 빌드 슬림화가 필요하면 제거 가능.
 apache-airflow-providers-openlineage==1.10.0
 openlineage-integration-common==1.20.5
 

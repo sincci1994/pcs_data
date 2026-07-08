@@ -1,9 +1,9 @@
-# `init/` — Oracle 스키마·권한·원천 초기화
+# `init/` — Oracle 스키마·권한·원천 초기화 DDL (참조용)
+
+> ⚠️ **참조 아티팩트**: 로컬 Oracle 컨테이너는 제거됐다([adr/0005](../../../design/adr/0005-slim-orchestration-topology.md)). 이 SQL 은 더 이상 자동 실행되지 않는다 — **외부 Oracle 에 DBA 가 수동 적용**하거나 SCADA 샘플을 재현할 때 참고한다. SCADA 샘플은 척추(참조)이며 [design/09](../../../design/09_SCENARIO_UTILITY_USAGE.md) 시나리오 정착 시 이 폴더째 삭제 예정.
 
 ## 목적
-Oracle 컨테이너가 **최초 1회 기동될 때** 실행되는 SQL 스크립트 모음. 데이터 계층(스키마), 접근 권한, 원천(SCADA) 모사 테이블, 통제(CTL) 테이블·뷰를 만든다.
-
-> gvenzl/oracle-free 이미지는 `/container-entrypoint-initdb.d/` 안의 `*.sql`을 **알파벳 순서로, 최초 기동 때 한 번만** 실행한다. (docker-compose에서 이 폴더가 그 경로에 마운트됨)
+데이터 계층(스키마), 접근 권한, 원천(SCADA) 모사 테이블, 통제(CTL) 테이블·뷰를 만드는 SQL 스크립트 모음. 알파벳 순(01→04)으로 적용한다.
 
 ## 파일·역할
 | 파일 | 역할 |
@@ -29,17 +29,14 @@ Oracle 컨테이너가 **최초 1회 기동될 때** 실행되는 SQL 스크립�
 | `PCS_CTL` | 통제/감사/카탈로그 | `C_ A_ M_ V_` |
 
 ## 사용/실행법
-- **자동**: `docker compose up`으로 Oracle이 처음 뜰 때 01~04가 자동 실행된다.
-- **수동 재적용**(기존 볼륨이 있어 자동 실행이 안 될 때):
-  ```bash
-  docker compose exec -T oracle bash -lc \
-    "sqlplus -s system/oracle@localhost:1521/FREEPDB1 @/container-entrypoint-initdb.d/04_ctl_views.sql"
-  ```
-- **완전 초기화 후 재실행**: `docker compose down -v` (볼륨 삭제) 후 다시 `up`.
+외부 Oracle 실서버에 `SYSTEM`(또는 상응 권한)으로 01~04 를 순서대로 적용한다:
+```bash
+sqlplus -s system/<pw>@<PCS_ORACLE_HOST>:1521/<service> @01_users.sql
+# 02_src_scada_ddl.sql → 03_lnd_ctl_ddl.sql → 04_ctl_views.sql 순으로 반복
+```
 
 ## 주의·겪은 이슈
 - **TRUNCATE에는 `DROP ANY TABLE` 필요**: `PCS_ETL`이 타 스키마(`PCS_LND`) 테이블을 TRUNCATE하려면 `DROP ANY TABLE` 권한이 있어야 한다(`ORA-01031` 회피). `01_users.sql`에 포함됨.
-- **gvenzl 최초 init 변덕**: 첫 기동 때 스크립트가 "DONE"으로 찍혀도 일부 grants/DDL이 미반영될 수 있었다. 기동 후 객체·권한을 검증하고, 누락 시 위 수동 재적용으로 보정.
-- **`04_ctl_views.sql`은 나중에 추가**됐으므로 기존 볼륨엔 자동 적용 안 됨 → 수동 적용 필요.
+- **적용 순서 의존**: 01(유저/권한) → 02·03(테이블) → 04(뷰). 앞 단계 누락 시 뒤 스크립트가 실패한다.
 
 ↑ [최상위 README](../../../README.md)

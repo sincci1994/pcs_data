@@ -47,7 +47,7 @@ RUN pip install --no-cache-dir \
 ENV PYTHONPATH="/opt/airflow:${PYTHONPATH}"
 
 # 4) python-oracledb 드라이버 모드.
-#    - 로컬(gvenzl/oracle-free): thin 으로 충분(Instant Client 불필요).
+#    - 기본 thin: Instant Client 불필요(호환 버전 외부 Oracle).
 #    - 실타깃 Oracle(버전 상이 → Thick 필수): ORA_PYTHON_DRIVER_TYPE=thick +
 #      Instant Client .so 를 이미지에 베이크(폐쇄망은 런타임 다운로드 불가). docs/08_AIRGAP_BUILD.md 참고.
 ENV ORA_PYTHON_DRIVER_TYPE=thin

@@ -8,10 +8,10 @@ source:
       type: Oracle
       username: ${PCS_DBT_USER}          # 예: DBT_EXEC
       password: ${PCS_DBT_PASSWORD}
-      hostPort: host.docker.internal:1521
+      hostPort: ${PCS_ORACLE_HOST}:1521  # 외부 Oracle 실서버 (OM 컨테이너에서 도달 가능한 주소)
       oracleConnectionType:
-        oracleServiceName: FREEPDB1
-      databaseName: FREEPDB1
+        oracleServiceName: ${PCS_ORACLE_SERVICE}
+      databaseName: ${PCS_ORACLE_SERVICE}
   sourceConfig:
     config:
       type: DatabaseMetadata

@@ -17,4 +17,4 @@
 - `ORA_PYTHON_DRIVER_TYPE=thick`, `OracleConnector.from_settings(driver_mode="thick", lib_dir=...)`.
 
 ## 컨테이너 이미지
-- airflow·oracle·marquez·openmetadata 이미지는 사내 레지스트리 미러 경유로 pull.
+- airflow·postgres·openmetadata 이미지는 사내 레지스트리 미러 경유로 pull. (oracle 은 외부 실서버 — 이미지 반입 불필요, marquez 는 제거 → [adr/0005](adr/0005-slim-orchestration-topology.md))

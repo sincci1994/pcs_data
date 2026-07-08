@@ -1,7 +1,7 @@
 -- =====================================================================
 -- 04_ctl_views.sql : 데이터 헬스 모니터링 뷰 (병목/끊김/건수급감 탐지)
---   기존 Oracle 볼륨이 있으면 최초 init 에서 자동 실행 안 되므로 수동 적용:
---   sqlplus system/oracle@localhost:1521/FREEPDB1 @/container-entrypoint-initdb.d/04_ctl_views.sql
+--   참조용 DDL — 외부 Oracle 에 수동 적용(01~03 이후):
+--   sqlplus -s system/<pw>@<PCS_ORACLE_HOST>:1521/<service> @04_ctl_views.sql
 -- =====================================================================
 SET DEFINE OFF;
 

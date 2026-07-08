@@ -1,4 +1,6 @@
-# `tools/` — 목데이터 생성기
+# `tools/` — 목데이터 생성기 (SCADA 샘플 전용·참조)
+
+> ⚠️ **참조 아티팩트**: SCADA 센서 샘플([design/09](../../design/09_SCENARIO_UTILITY_USAGE.md) 정착 시 삭제 예정)을 돌려보기 위한 목데이터 생성기. 로컬 Oracle 은 제거됐으므로 외부 Oracle 실서버를 대상으로 실행한다(→ [adr/0005](../../design/adr/0005-slim-orchestration-topology.md)).
 
 ## 목적
 원천(`SRC_SCADA.TRACE_RAW`)에 **설비 센서 측정값을 하루치씩 채워 넣는** 스크립트. 실제 SCADA가 없으니, 파이프라인을 돌려볼 데이터를 만들어 준다.
@@ -15,12 +17,12 @@
 
 ## 사용/실행법
 ```bash
-# 컨테이너 안에서 (Oracle 호스트명 = oracle). Windows는 MSYS_NO_PATHCONV=1 필수
+# 컨테이너 안에서 (외부 Oracle 호스트 = .env 의 PCS_ORACLE_HOST). Windows는 MSYS_NO_PATHCONV=1 필수
 MSYS_NO_PATHCONV=1 docker compose exec -T airflow-scheduler \
-  python /opt/airflow/tools/gen_mock_trace.py --date 2026-06-01 --host oracle
+  python /opt/airflow/tools/gen_mock_trace.py --date 2026-06-01 --host <oracle-host>
 
-# 호스트에서 직접 (pip install oracledb 필요, 기본 host=localhost)
-python tools/gen_mock_trace.py --date 2026-06-01
+# 호스트에서 직접 (pip install oracledb 필요)
+python tools/gen_mock_trace.py --date 2026-06-01 --host <oracle-host>
 ```
 
 ### 파라미터
@@ -29,7 +31,7 @@ python tools/gen_mock_trace.py --date 2026-06-01
 | `--date` | (필수) | 생성 날짜 `YYYY-MM-DD` |
 | `--interval-min` | 10 | 측정 간격(분). 10이면 하루 144포인트/센서 |
 | `--alarm-rate` | 0.03 | HI/LO 초과(알람) 비율 |
-| `--host` | localhost | Oracle 호스트(컨테이너 안에선 `oracle`) |
+| `--host` | localhost | 외부 Oracle 호스트(`.env` 의 `PCS_ORACLE_HOST`) |
 
 ## 워터마크와의 관계 (중요)
 추출 DAG은 **워터마크 기반 증분**이라, 이미 적재한 시점 이후 데이터만 가져간다. 같은 날짜 데이터를 다시 만들어도 워터마크가 이미 그 날짜를 지났으면 재적재되지 않는다. 강제로 다시 적재하려면:

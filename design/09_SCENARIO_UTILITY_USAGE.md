@@ -45,7 +45,7 @@ Postgres SLV → CORE → GOLD:  지표 "Utility 사용량" (설비별 일별)
 | 웨어하우스 | Oracle 단일 인스턴스 (전 계층) | **Postgres** (LND~GOLD·CTL) — Oracle은 소스 전용 |
 | dbt 어댑터 | dbt-oracle | **dbt-postgres** |
 | 적재 방식 | Oracle 내부 `INSERT...SELECT` | **크로스 DB** fetch+bulk insert (Postgres 커넥터 신규 구현 필요) |
-| compose | Oracle + Airflow 메타 Postgres | + **웨어하우스용 Postgres 서비스 추가** (Airflow 메타 DB와 분리) |
+| compose | Oracle + Airflow 메타 Postgres | 데이터 DB 컨테이너 없음 — **소스 Oracle·웨어하우스 Postgres 모두 외부 DB 서버** (`.env` 접속, → [adr/0005](adr/0005-slim-orchestration-topology.md)) |
 | CTL 스키마 | Oracle `PCS_CTL` | Postgres로 이관 (뷰·on-run-end 훅 포팅, COMMIT 훅은 불필요해질 수 있음 — 재검토) |
 
 ## 확정 사항 (2026-07-07)

@@ -17,9 +17,10 @@ dbt test 가 돌 때마다 자동 적재(on-run-end 매크로). 실패(`PASS_YN=
 1. 해당 모델·테스트명 확인 → 리소스 담당자에게 `../workspace/instructions/` 로 지시.
 2. 반복 실패는 `../workspace/mistakes/` 에 교훈으로 기록 요청.
 
-## ③ 계보/런타임 (Marquez, localhost:3000)
-- 네임스페이스 `pcs` → DAG 그래프에서 실패/지연 단계 시각 확인.
-- "어느 테이블이 어디서 오나"는 OpenMetadata(8585) 카탈로그에서 비즈니스 언어로 탐색.
+## ③ 계보/런타임
+- 실패/지연 단계는 Airflow UI(8080) Grid/Graph 뷰 + ①의 `V_BOTTLENECK` 으로 확인.
+- 테이블/컬럼 계보("어느 테이블이 어디서 오나")는 OpenMetadata(8585) — dbt ingestion 이 dbt DAG 계보를 적재하며, 비즈니스 언어(도메인·용어)로 탐색.
+- (참고) 과거 Marquez 기반 런 단위 계보는 제거됨 — 근거·재도입 경로: [adr/0005](../design/adr/0005-slim-orchestration-topology.md)
 
 ## 이상 시 에스컬레이션
 | 증상 | 1차 확인 | 담당 |
