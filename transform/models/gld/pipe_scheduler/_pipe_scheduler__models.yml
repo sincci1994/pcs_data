@@ -1,0 +1,117 @@
+version: 2
+
+models:
+  - name: dim_equipment
+    description: >
+      배관 스케줄러 설비 계층 노드 8종 (glossary '설비'). 레거시 검증 완료 변환 규칙의 이식 —
+      명명·챔버 분리 하이브리드·NOR 소유 결정론. Publish: srv.equipment 전량 교체.
+    columns:
+      - name: code
+        description: "설비 노드 코드 (전역 유일, 명명 규칙은 인테이크 기록 §3)"
+        tests: [unique, not_null]
+      - name: type_code
+        description: "노드 유형 8종"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["MAIN", "CHAMBER", "PUMP", "SCRUBBER", "SCRUBBER_NOR_VALVE",
+                       "SCRUBBER_BYP_VALVE", "SCRUBBER_MERGE", "LATERAL_DUCT"]
+      - name: main_equipment_code
+        description: "소속 메인설비 (MAIN 자신은 NULL). Pair 스크러버는 NOR 소유 설비"
+        tests:
+          - relationships:
+              to: ref('dim_equipment')
+              field: code
+      - name: team_code
+        description: "팀 코드 (org 매핑 유래)"
+        tests: [not_null]
+      - name: division_code
+        description: "사업부 코드"
+        tests: [not_null]
+      - name: site_code
+        description: "사이트 코드"
+        tests: [not_null]
+      - name: line_code
+        description: "라인 코드"
+        tests: [not_null]
+      - name: area_code
+        description: "공정 영역 코드"
+        tests: [not_null]
+      - name: group_code
+        description: "프론트 렌더링 묶음 키 — 스크러버군(스크러버·밸브·MERGE)은 스크러버 코드 공유"
+        tests: [not_null]
+      - name: layer_order
+        description: "렌더링 레이어 (1=MAIN/CHAMBER, 2=PUMP, 3=SCRUBBER/밸브, 4=MERGE, 5=DUCT)"
+        tests: [not_null]
+      - name: vendor_code
+        description: "제조사 자연키 (MAIN/CHAMBER 는 NULL 허용). surrogate id 는 서빙 import 책임"
+        tests:
+          - relationships:
+              to: ref('dim_vendor')
+              field: code
+
+  - name: dim_pipe
+    description: >
+      배관 연결 엣지 6종 (glossary '배관'). code = {from}_{to}_{chamber}.
+      NOR-only 챔버는 SS/ALLBYPASS 만 미생성. Publish: srv.pipe 전량 교체.
+    columns:
+      - name: code
+        description: "배관 코드 (전역 유일)"
+        tests: [unique, not_null]
+      - name: type_code
+        description: "배관 유형 6종"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["FORELINE", "PS", "SS", "ALLBYPASS", "SD1", "SD2"]
+      - name: main_equipment_code
+        description: "소속 메인설비"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_equipment')
+              field: code
+      - name: chamber_code
+        description: "경로가 속한 챔버 노드"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_equipment')
+              field: code
+      - name: from_equipment_code
+        description: "시작 노드"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_equipment')
+              field: code
+      - name: to_equipment_code
+        description: "끝 노드"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_equipment')
+              field: code
+      - name: vendor_code
+        description: "배관 vendor (SS = NOR 스크러버 제조사, 나머지 NULL)"
+      - name: length_m
+        description: "길이(m) — 종별 고정 기본값 (레거시 승계)"
+        tests: [not_null]
+      - name: mtbf_days
+        description: "MTBF(일) — 기본 150 (레거시 승계)"
+        tests: [not_null]
+
+  - name: dim_vendor
+    description: "협력사 기준정보 — PortMaster2 등장 제조사 자동 생성. Publish: srv.vendor"
+    columns:
+      - name: code
+        description: "제조사 자연키 (= seqp_maker)"
+        tests: [unique, not_null]
+      - name: name
+        description: "제조사명 (v1 = 코드와 동일, 실명칭은 후속 큐레이션)"
+        tests: [not_null]
+      - name: type_code
+        description: "협력사 유형 (고정 EQUIPMENT)"
+        tests: [not_null]
+      - name: description
+        description: "생성 출처 설명"

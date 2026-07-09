@@ -1,7 +1,8 @@
-# 06. 시나리오 — Utility 사용량 Summary (첫 번째 데이터 제품)
+# 06. 시나리오 — Utility 사용량 Summary [보류]
 
-> 시나리오는 필요 시 07, 08…로 추가된다. 각 시나리오는 extract 구현·dbt 모델·정의서 단위로
-> 나란히 얹히는 구조라 서로 충돌하지 않는다.
+> **2026-07-09 보류**: 첫 제품은 [09 — Equipment/Pipe 기준정보](09_SCENARIO_EQUIPMENT_PIPE.md)로 교체.
+> 이 시나리오는 CurrentAvgUsage 정의 확정 등 미확정 항목 해소 후 재개한다. 내용은 유효하게 보존.
+> 시나리오는 필요 시 나란히 추가된다 — extract 구현·dbt 모델·정의서 단위로 얹히는 구조라 서로 충돌하지 않는다.
 
 ## 업무 배경
 레거시 **EES(설비로그)** 에는 PCS 설비의 센서 Parameter 데이터가 2초 주기로 쌓이고, 사내 시스템이 이를 **5분 데이터 테이블**로 집계해 관리한다(2초→5분 집계는 범위 밖 — **5분 테이블이 소스**). 이 중 Utility 관련 센서만 추려 설비별 Summary 데이터 프로덕트를 만든다:
@@ -14,10 +15,10 @@
 레거시 EES (5min Parameter 테이블, Oracle)
    │  ① Extract — chunked fetch + bulk insert (크로스 DB)
    ▼
-warehouse.lnd (랜딩)
+warehouse.brz (bronze)
    │  ② dbt — Utility 센서 필터 → 설비×일 집계 + 당일 평균
    ▼
-warehouse.slv → warehouse.gold: Utility 사용량 Summary
+warehouse.slv → warehouse.gld: Utility 사용량 Summary (fct_utility_usage_daily 등 — 명명 → design/10)
    │  ③ dbt test 통과 시 Publish
    ▼
 서빙 + OpenMetadata 카탈로그 발행
@@ -36,7 +37,7 @@ warehouse.slv → warehouse.gold: Utility 사용량 Summary
 2. **대상 설비 범위**: 전체 15만 대 vs 초기 부분집합 — warehouse 작업 윈도 볼륨 산정의 1차 입력 (→ [08 §2](08_DATA_OPS.md)).
 3. 실제 명명 패턴 문자열 (확인 전 목데이터 가정값: `UTIL_%`).
 4. EES 소스 테이블/컬럼 실명세 → 목데이터 스키마를 실물에 맞춰 조정.
-5. **타임존·일 경계**: 일 = Asia/Seoul 00:00 [기본값], LND는 소스 타임스탬프 원형+TZ 보존 — glossary 확정 시 명시.
+5. **타임존·일 경계**: 일 = Asia/Seoul 00:00 [기본값], brz는 소스 타임스탬프 원형+TZ 보존 — glossary 확정 시 명시.
 6. 기존에 담당자가 보던 Excel 산출물 존재 여부 → 있으면 대사 검증 대상([04_AS_IS_INTAKE.md](04_AS_IS_INTAKE.md) 6단계) 포함.
 
 > 결측 5분 버킷은 **기본 0 취급으로 확정** (일 합산에서는 제외와 동일 결과) — → [08 §5](08_DATA_OPS.md).

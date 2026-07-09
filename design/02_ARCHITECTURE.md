@@ -6,10 +6,10 @@
 소스 (레거시 EES 등, 별도 시스템에서 주기 제공)
    │  ① Extract — Airflow 태스크 (크로스 DB: chunked fetch + bulk insert)
    ▼
-warehouse.lnd (랜딩 — 원형 보존)
+warehouse.brz (bronze — 원형 보존)
    │  ② Transform — dbt (Manager/Model DAG로 실행)
    ▼
-warehouse.slv (정제·표준화) → warehouse.gold (비즈니스 데이터 프로덕트)
+warehouse.slv (silver — 정제·표준화) → warehouse.gld (gold — 비즈니스 데이터 프로덕트)
    │  ③ Validate — dbt test (실패 시 Publish 차단)
    │  ④ Publish — Airflow 태스크 (볼륨 기준 전량/윈도 교체, 원자적 swap)
    ▼
@@ -19,17 +19,17 @@ warehouse.slv (정제·표준화) → warehouse.gold (비즈니스 데이터 프
 **저장 책임 분리** [확정]: 장기 보관(5년)은 운영 Oracle(소스 원본)과 서빙 DB(GOLD 이력)가 담당한다.
 **warehouse Postgres는 변환 연산 자원 전용** — 작업 윈도(rolling window)만 보유하는 소모성 작업 공간이며, 서빙·장기 축적을 하지 않는다. → [08_DATA_OPS.md](08_DATA_OPS.md)
 
-## 계층 (요구 4: LND / SILVER / GOLD)
+## 계층 (요구 4의 LND/SILVER/GOLD — 메달리온 축약 체계로 구현, 명명 정본: [10](10_NAMING_ORGANIZATION.md))
 
 | 계층 | 스키마 | 역할 | 담당 |
 |---|---|---|---|
-| Landing | `lnd` | 소스 원형 보존, 워터마크 기반 적재 | Extract (Airflow) |
-| Silver | `slv` | 정제·표준화 (원천값 보존) — **소스 변경 흡수 계층**: GOLD는 SLV만 참조하므로 소스 교체 영향이 여기서 격리된다 | dbt |
-| Gold | `gold` | 비즈니스 데이터 프로덕트 (지표·Summary) | dbt |
-| Work | `wrk` | 분석가 실험 계층 — Publish·OM 발행 제외, 승격 게이트로만 slv/gold 진입 (→ [07](07_AUTHORING_FLOW.md)) | 분석가 |
+| Bronze | `brz` | 소스 원형 보존, 워터마크 기반 적재 | Extract (Airflow) |
+| Silver | `slv` | 정제·표준화 (원천값 보존) — **소스 변경 흡수 계층**: gold는 slv만 참조하므로 소스 교체 영향이 여기서 격리된다 | dbt |
+| Gold | `gld` | 비즈니스 데이터 프로덕트 (지표·Summary) | dbt |
+| Sandbox | `sbx` | 분석가 실험 계층 — Publish·OM 발행 제외, 승격 게이트로만 slv/gld 진입 (→ [07](07_AUTHORING_FLOW.md)) | 분석가 |
 | Control | `ctl` | 운영 메타데이터 — `ctl.watermark`(소스×테이블 이벤트타임 워터마크)·`ctl.job_audit`(dag_id+logical_date 유니크, 행수·상태)·운영 메트릭. **platform 전용** (분석가·dbt 접근 불가). 컬럼 상세는 Phase 3 | Extract·notifier |
 
-**권한 원칙** (GRANT 스크립트는 Phase 2 infra 산출물): 분석가 롤 = `wrk` 쓰기 / `slv`·`gold` 읽기 + `statement_timeout` 기본 적용. 파이프라인 롤 = `lnd`~`gold` 쓰기. `ctl`은 platform 전용 — 규칙이 관례가 아니라 DB 롤로 강제되게 한다.
+**권한 원칙** (GRANT 스크립트는 Phase 2 infra 산출물): 분석가 롤 = `sbx` 쓰기 / `slv`·`gld` 읽기 + `statement_timeout` 기본 적용. 파이프라인 롤 = `brz`~`gld` 쓰기. `ctl`은 platform 전용 — 규칙이 관례가 아니라 DB 롤로 강제되게 한다.
 
 > CORE(스타 스키마) 중간 계층은 도입하지 않는다 — 모델 수·복잡도가 커지면 재검토 (→ [roadmap.md](roadmap.md)).
 
@@ -38,7 +38,7 @@ warehouse.slv (정제·표준화) → warehouse.gold (비즈니스 데이터 프
 | 단계 | 담당 | 레거시 대응 |
 |---|---|---|
 | Extract/Load | Airflow 태스크 (dbt는 DB 간 이동 불가) | 수동 추출 구간 |
-| Transform | dbt 모델 (SLV→GOLD) | 개인 Excel 가공 로직 |
+| Transform | dbt 모델 (slv→gld) | 개인 Excel 가공 로직 |
 | Validate | dbt test — 실패 시 Publish 차단 | 사후 수동 검증 SQL |
 | Publish | Airflow 태스크 — 소규모 마트는 전량 교체, 대규모(설비×일 grain)는 윈도 교체. **원자성 불변조건**: staging 적재 후 단일 트랜잭션 swap — 소비자는 항상 완전한 스냅샷만 보고, 실패 시 이전 상태 보존 (→ [08 §3](08_DATA_OPS.md)) | 수동 CSV export/import |
 | 가시성 | OpenMetadata | (신규) |

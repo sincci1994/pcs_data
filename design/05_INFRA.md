@@ -1,6 +1,7 @@
 # 05. 인프라 — 로컬 검증 스택 + 원격 이식
 
-> 상태: 설계 확정(2026-07-09, 舊 계획수정안 편입) — 구축은 **Phase 2**.
+> 상태: **Phase 2 구축·검증 완료(2026-07-09)** — 시나리오 1·2·3·5·6 통과. 4(DAG 팩토리)도 Phase 3에서 통과(모델 7+Manager 전개, import 에러 0).
+> 결과·함정 기록: [workspace/pdca/phase2-infra/check.md](../workspace/pdca/phase2-infra/check.md) · 조작 런북: [platform/infra/README.md](../platform/infra/README.md)
 > 원격 리눅스 서버(`~/personal/ssc/pcs_data`)의 기존 스택 문제를 로컬(Win11 + Docker Desktop/WSL2)에서 표준 구성으로 재현·검증 후 이식한다.
 
 ## 배경 — 원격 스택의 구조적 문제 2건
@@ -30,7 +31,7 @@
 | `elasticsearch` | 유지, `ES_JAVA_OPTS=-Xms512m -Xmx512m` 하향 |
 | `execute-migrate-all` | 유지 (Exited(0)이 정상) |
 | `openmetadata-server` | 유지 (`PIPELINE_SERVICE_CLIENT_ENDPOINT: http://ingestion:8080`) |
-| `ingestion` | **수정**: `build:` 커스텀 이미지. entrypoint는 공식 그대로(초기화 체인 담당 — 별도 airflow-init 불필요). env(AIRFLOW_ADMIN_*, DBT_*)·volumes(dags, dbt)·depends_on(warehouse healthy) 추가 |
+| `ingestion` | **수정**: `build:` 커스텀 이미지. entrypoint는 공식 그대로(초기화 체인 담당 — 별도 airflow-init 불필요·admin은 SimpleAuthManager 기본 admin/admin). env(DBT_*, TZ)·volumes·depends_on(warehouse healthy) 추가 |
 | `warehouse` | **신규**: postgres:16-alpine, `5433:5432`, healthcheck, named volume |
 
 커스텀 이미지 (dbt는 의존성 충돌 방지 위해 venv 격리):
@@ -45,9 +46,10 @@ USER airflow
 ```
 
 ## Windows(WSL2) 사전 조치
-- `.wslconfig`: `[wsl2] memory=12GB` (스택 합계 ~6GB) → `wsl --shutdown` 후 Docker Desktop 재시작.
+- WSL 가용 메모리 12GB 미만일 때만 `.wslconfig` `[wsl2] memory=12GB` 설정(스택 합계 ~6GB) → `wsl --shutdown` 후 Docker Desktop 재시작. (기본 호스트 50% — 32GB 호스트는 조치 불요로 확인)
 - ES `vm.max_map_count=262144` 확인: `wsl -d docker-desktop sysctl vm.max_map_count`.
-- dags/·dbt/만 bind mount, DB/ES/logs는 named volume.
+- **쓰기 경로는 bind mount 금지** (Windows bind 는 컨테이너에서 root:755 — airflow 쓰기 불가):
+  dags 루트는 named volume(OM 이 인제스천 DAG 를 기록), repo DAG 는 `/opt/airflow/dags/repo` **중첩 bind**(Airflow 재귀 스캔), transform 은 읽기 전제 bind + dbt 산출물은 `DBT_TARGET_PATH`/`DBT_LOG_PATH` 로 컨테이너 로컬. DB/ES/logs 는 named volume.
 
 ## 검증 시나리오 (Phase 2 완료 조건)
 1. `docker compose config` → `up -d --build` → `ps`: execute-migrate-all Exited(0), 나머지 healthy.
@@ -59,7 +61,7 @@ USER airflow
 
 ## 원격(pcs_data) 이식 체크리스트
 1. webserver/scheduler 분리 구성 → **단일 ingestion 컨테이너**(공식 패턴)로 통합.
-2. Airflow 2→3 차이 반영: `db init`→`db migrate`, `users create`→SimpleAuthManager 환경변수. **주의**: SimpleAuthManager는 로컬 검증용 — 원격에서 여러 명이 쓰면(분석가 wrk 트리거 vs 운영 clear 권한 구분) FAB auth manager 전환 검토.
+2. Airflow 2→3 차이 반영: `db init`→`db migrate`, `users create`→SimpleAuthManager 환경변수. **주의**: SimpleAuthManager는 로컬 검증용 — 원격에서 여러 명이 쓰면(분석가 sbx 트리거 vs 운영 clear 권한 구분) FAB auth manager 전환 검토.
 3. 리눅스 bind mount: `chown -R 50000:0 dags dbt`; logs는 named volume.
 4. 기존 OM DB/ES named volume 백업 후 migrate; Airflow 메타DB 초기화 허용 여부 사전 확인. 운영 개시 후에는 Airflow 메타DB·OM DB **상시 백업**을 Phase 2 산출물로 구성 (warehouse는 소모성 — 백업 불요, → [08 §1](08_DATA_OPS.md)).
 5. `vm.max_map_count` 영구 설정, `.env` 비밀번호 전면 교체, 내부 포트 외부 노출 차단.

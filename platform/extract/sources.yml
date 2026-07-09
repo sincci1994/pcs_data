@@ -1,0 +1,25 @@
+# 소스 선언 — 이 파일의 블록 1개 = extract DAG 1개 + Asset 자동 생성 (→ design/03·10, GUIDE.md)
+# 신규 소스 추가는 여기에 블록을 추가하는 것으로 끝난다 (파이썬 코드 작업 불필요).
+#
+# 필드:
+#   conn             : 접속 env 접두사 (PCS_SRC → PCS_SRC_HOST/PORT/DB/USER/PASSWORD)
+#   table            : 소스 테이블 (schema.table)
+#   mode             : snapshot(전량 교체) | watermark(증분+lookback — 미구현, 센서 시나리오 재개 시)
+#   target           : bronze 테이블 (brz.<소스>__<엔티티> — design/10 명명)
+#   schedule         : cron (Asia/Seoul)
+#   expected_columns : pre-flight 계약 체크 대상 (누락 시 fail-fast + 알림)
+#   filter           : (선택) 추출 WHERE 절 — 리터럴 SQL 조건식
+
+ees_portmaster2:
+  conn: PCS_SRC
+  table: src.pcs_sq_port_mst_2nd        # 원격: ees.pcs_sq_port_mst_2nd
+  mode: snapshot
+  target: brz.ees__portmaster2
+  schedule: "0 1 * * *"
+  expected_columns:
+    [eqp_id, eqp_chamber_id, eqp_chamber_posn, eqp_posn,
+     seqp_type, seqp_maker, seqp_model_code, seqp_id, seqp_ch, seqp_port, db_user]
+  select_columns:
+    [eqp_id, eqp_chamber_id, eqp_chamber_posn, eqp_posn,
+     seqp_type, seqp_maker, seqp_model_code, seqp_id, seqp_ch, seqp_port]
+  filter: "seqp_type IN ('PUMP', 'SCRUBBER') AND db_user = 'PF_PCS'"

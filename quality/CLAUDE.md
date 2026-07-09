@@ -12,5 +12,5 @@
 2. 대사 검증 쿼리·기준 스냅샷·결과는 재실행 가능하게 남긴다 (일회성 콘솔 확인 금지).
 3. dbt test 실패는 무시·주석처리 금지 — 원인 수정 or 정의 재협의(→ governance) 중 하나.
 4. 운영 점검(적재량·워터마크·실패 알림) 런북은 이 폴더에 축적한다.
-5. `wrk` 실험 모델은 dbt test 면제 — slv/gold 승격 게이트에서 필수로 전환된다 (→ [design/07](../design/07_AUTHORING_FLOW.md)).
+5. `sbx` 실험 모델은 dbt test 면제 — slv/gld 승격 게이트에서 필수로 전환된다 (→ [design/07](../design/07_AUTHORING_FLOW.md)).
 6. **운영 메트릭은 이 폴더 소유**: freshness 점검, 지연 도착률(lookback 밖 재동기화 회수 건수), 재동기화 대사 결과, 결측률 — 점검 쿼리·임계값·런북을 여기에 둔다 (→ [design/08 §4·§7](../design/08_DATA_OPS.md)).

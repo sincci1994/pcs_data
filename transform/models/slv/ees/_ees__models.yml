@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: stg_ees__portmaster2
+    description: "PortMaster2 표준화 — 원천값 보존, 유효행 필터(레거시 01 승계)만 적용"
+    columns:
+      - name: eqp_id
+        description: "메인설비 ID (예: SLWB331)"
+        tests: [not_null]
+      - name: eqp_chamber_id
+        description: "챔버 ID (0=TM/LL, A/B 또는 1~N=공정)"
+        tests: [not_null]
+      - name: eqp_chamber_posn
+        description: "챔버 내 경로 위치 (LL1/TM/PRO/DIVERT/PED) — 경로 짝짓기 조인 키"
+        tests: [not_null]
+      - name: eqp_posn
+        description: "서브설비 위치 (0=펌프, NOR/BYP=스크러버 계통)"
+        tests: [not_null]
+      - name: seqp_type
+        description: "서브설비 유형"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["PUMP", "SCRUBBER"]
+      - name: seqp_maker
+        description: "제조사 코드 (= vendor 자연키)"
+        tests: [not_null]
+      - name: seqp_model_code
+        description: "서브설비 모델 코드 (소스 그대로, NULL 허용)"
+      - name: seqp_id
+        description: "서브설비 ID — 이미 eqp_id 접두사 포함 (재접두사 금지)"
+        tests: [not_null]
+      - name: seqp_ch
+        description: "스크러버 채널 (펌프는 0) — SCRUBBER 는 NOT NULL 이 slv 필터로 보장"
+      - name: seqp_port
+        description: "포트 (참고용)"

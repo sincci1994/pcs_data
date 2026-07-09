@@ -1,6 +1,23 @@
 # 용어집 (Glossary)
 
 > 지표·용어 정의의 단일 원천. 항목 형식: 정의 / 산식 / 단위 / 결측 정책 / 상태.
+> 기준정보(엔티티) 항목은 산식 대신 **생성 규칙·키**를 기재한다.
+
+## 설비 (Equipment)
+
+- **정의**: 배관 스케줄러가 렌더링하는 설비 계층 노드. 레거시 EES **PortMaster2**(배관 구성 원장)에서 변환 생성한다. 8종: `MAIN`(메인설비) / `CHAMBER`(챔버) / `PUMP`(펌프) / `SCRUBBER`(스크러버) / `SCRUBBER_NOR_VALVE`·`SCRUBBER_BYP_VALVE`(밸브) / `SCRUBBER_MERGE`(합류) / `LATERAL_DUCT`(덕트).
+- **생성 규칙**: 명명·챔버 분리(공정=경로 분리, TM/LL=단일)·NOR 소유 결정론 — 단일 원천: [인테이크 기록](intake/2026-07-09_equipment_pipe_portmaster2.md) §4 (레거시 변환규칙.md 준수 이식).
+- **키**: `code` (전역 유일). 조직(팀/라인 등)은 enrichment — v1은 더미 시드, SMDM/GPM 연동은 후속.
+- **결측 정책**: 소스 필수 컬럼 NULL/빈값 행은 slv(staging)에서 제외 (레거시 01 스크립트와 동일 기준).
+- **상태**: **확정** (2026-07-09) — 레거시 검증 완료 로직의 이식이므로 대사 검증 게이트 적용.
+
+## 배관 (Pipe)
+
+- **정의**: 설비 노드 간 배관 연결(방향 있는 엣지). 6종: `FORELINE`(챔버→펌프) / `PS`(펌프→NOR밸브) / `SS`(NOR→BYP밸브) / `ALLBYPASS`(BYP밸브→BYP MERGE) / `SD1`(스크러버→자기 MERGE) / `SD2`(MERGE→덕트).
+- **생성 규칙**: `code` = `{from}_{to}_{chamber}`. NOR-only 챔버는 SS/ALLBYPASS만 조건부 미생성, 나머지 4종 보존. 길이/MTBF 기본값은 종별 고정 상수 — [인테이크 기록](intake/2026-07-09_equipment_pipe_portmaster2.md) §4.
+- **키**: `code` (전역 유일). `from/to/chamber/main` 코드는 Equipment `code` 참조 — FK 누락 0건이 품질 게이트.
+- **결측 정책**: Equipment와 동일 (slv 필터 승계).
+- **상태**: **확정** (2026-07-09).
 
 ## Utility 사용량 (UtilityUsage)
 
