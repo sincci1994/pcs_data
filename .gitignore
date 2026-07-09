@@ -1,32 +1,24 @@
-logs/
-!logs/.gitkeep
-platform/plugins/
-!platform/plugins/.gitkeep
+# secrets
+.env
+*.pem
+*.key
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# dbt
 transform/dbt/target/
 transform/dbt/dbt_packages/
 transform/dbt/logs/
-__pycache__/
-*.pyc
-.env
 
-# 사내 사설 CA (환경별 산출물 — 실파일 커밋 금지, 폴더/안내는 유지)
-certs/*
-!certs/.gitkeep
-!certs/README.md
+# airflow / docker runtime
+logs/
+airflow.db
 
-# OpenMetadata: 데이터 볼륨(대용량) + 런타임 JWT 토큰 포함 인제스트 설정
-platform/infra/openmetadata/docker-volume/
-platform/infra/openmetadata/oracle_ingest.yaml
-platform/infra/openmetadata/dbt_ingest.yaml
-
-# 파이썬 패키징/툴링 산출물
-.venv/
-dist/
-*.egg-info/
-.pytest_cache/
-.ruff_cache/
-
-# Agent 임시 작업물 (폴더/안내는 유지, 내용은 무시)
-workspace/temp/*
-!workspace/temp/.gitkeep
-!workspace/temp/README.md
+# os / editor
+.DS_Store
+Thumbs.db

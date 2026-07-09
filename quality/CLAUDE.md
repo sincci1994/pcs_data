@@ -1,19 +1,16 @@
-# quality/ — 파이프라인 건강·데이터 품질 (품질·모니터링 담당)
+# quality/ — 검증 (품질 담당)
 
-코드 내부가 아니라 **결과 테이블/뷰와 UI**를 본다.
+검증은 2중이다 — 성격이 다르므로 섞지 말 것.
 
-## 관측 3계층
-| 계층 | 어디서 | 무엇 |
-|---|---|---|
-| CTL | `PCS_CTL` 스키마 | 실행이력(`C_JOB_RUN`)·워터마크(`C_SOURCE_WATERMARK`)·DQ 결과(`A_DQ_RESULT`)·병목(`V_BOTTLENECK`) |
-| Airflow UI | http://localhost:8080 | 런타임(실패/지연 단계 — Grid/Graph 뷰) |
-| OpenMetadata | http://localhost:8585 | 비즈니스 카탈로그(도메인·용어·테이블) + 테이블 계보(dbt ingestion) |
+| 종류 | 시점 | 무엇 | 위치 |
+|---|---|---|---|
+| **대사 검증** (parallel-run) | 이관 승격 전 1회성 게이트 | 레거시 Excel/쿼리 산출물 vs 신규 모델 결과 비교 | `quality/reconciliation/<대상>/` |
+| **dbt test** | 운영 상시 (매 실행) | 키 무결성·도메인 range — 실패 시 Publish 차단 | `transform/` schema.yml (정책만 여기) |
 
-핵심 뷰: `V_FRESHNESS`(신선도) · `V_BOTTLENECK`(병목) · `V_VOLUME_ANOMALY`(볼륨 이상) — 정의 `platform/infra/init/04_ctl_views.sql`, 점검 쿼리 `queries/health_check.sql`, 해석법 [runbook.md](runbook.md).
-
-## 저작 규칙 (필수)
-1. **헬스뷰는 사람 조회용에서 끝내지 않는다**: 새 점검 항목을 추가하면 자동 게이트(센서/테스트) 또는 알림에 연결하는 것까지가 완료 조건이다. "수동 sqlplus 조회"만 있는 점검은 미완성.
-2. **DQ 규칙은 dbt test로**: 반복 품질 규칙은 리소스 담당자에게 dbt test 추가를 지시 — 결과는 `A_DQ_RESULT`로 자동 수집되는 계약을 유지한다.
-3. **이상 발견 → 지시서**: 원인 단계는 Airflow UI·`V_BOTTLENECK`·OM 계보로 추적하고, 조치는 `../workspace/instructions/`에 지시서로 남긴다(구두/채팅 금지).
-
-기준 시나리오: [design/09](../design/09_SCENARIO_UTILITY_USAGE.md)
+## 규칙
+1. **대사 검증은 차이의 원인 규명**이다: 불일치 발견 시 "레거시가 맞다"를 전제하지 말 것 — 레거시 오류라면 담당자 합의 후 인테이크 문서에 기록하고 신규 정의를 채택한다.
+2. 대사 검증 쿼리·기준 스냅샷·결과는 재실행 가능하게 남긴다 (일회성 콘솔 확인 금지).
+3. dbt test 실패는 무시·주석처리 금지 — 원인 수정 or 정의 재협의(→ governance) 중 하나.
+4. 운영 점검(적재량·워터마크·실패 알림) 런북은 이 폴더에 축적한다.
+5. `wrk` 실험 모델은 dbt test 면제 — slv/gold 승격 게이트에서 필수로 전환된다 (→ [design/07](../design/07_AUTHORING_FLOW.md)).
+6. **운영 메트릭은 이 폴더 소유**: freshness 점검, 지연 도착률(lookback 밖 재동기화 회수 건수), 재동기화 대사 결과, 결측률 — 점검 쿼리·임계값·런북을 여기에 둔다 (→ [design/08 §4·§7](../design/08_DATA_OPS.md)).

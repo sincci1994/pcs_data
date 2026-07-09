@@ -1,35 +1,40 @@
-# CLAUDE.md — PCS 파이프라인 (START HERE)
+# CLAUDE.md — PCS 데이터 파이프라인 (START HERE)
 
-PCS 설비 데이터 거버넌스 파이프라인의 **오케스트레이션 서버** 레포 — Airflow + dbt(Cosmos) + OpenMetadata 카탈로그.
-데이터 DB(소스 Oracle·웨어하우스 Postgres)는 **외부 DB 서버** — 이 서버는 오케스트레이션·메타데이터만 켠다. → [adr/0005](design/adr/0005-slim-orchestration-topology.md)
-목적: 담당자마다 다른 지표 정의를 SQL 중심 + 문서 기반으로 표준화.
+PCS기술팀의 **업무 능력·데이터 활용능력 향상**을 위한 데이터 파이프라인 — Airflow + dbt + OpenMetadata.
+요구사항 원문과 반영 매핑: [design/00_REQUIREMENTS.md](design/00_REQUIREMENTS.md)
 
-> **첫 번째 데이터 제품**: [design/09_SCENARIO_UTILITY_USAGE.md](design/09_SCENARIO_UTILITY_USAGE.md) — Oracle 5분 Parameter → Postgres 적재 → 설비별 일별 Utility 사용량. 샘플 재작성의 기준이며, 시나리오는 필요 시 09, 10…으로 추가된다. 현재 코드는 이전 SCADA 샘플의 척추(참조용)다.
+## 왜 만드는가
+- 레거시 앱 VIEW_TABLE을 못 믿어 엔지니어마다 Excel로 재가공 → **개인 판단이 만든 불규칙한 그림자 데이터 프로덕트** 난립.
+- 전체 비즈니스 플로우 문서 부재 — VOC 패치로만 변형, 합의된 정보는 방치.
+- 해법: 실무 담당자의 변환 방식을 **발굴(AS-IS 인테이크)** 해 LND→SLV→GOLD로 표준화하고, 비즈니스 정의(온톨로지)로 데이터 흐름을 본다.
 
-## 레이아웃 (역할 기반 7폴더)
+> **첫 번째 데이터 제품**: [design/06_SCENARIO_UTILITY_USAGE.md](design/06_SCENARIO_UTILITY_USAGE.md) — 레거시 EES 설비로그 센서 데이터 → 설비별 **일단위 사용량 + 현재 평균 사용량** Summary.
+
+## 레이아웃 (역할 기반)
 
 | 폴더 | 무엇 | 누구 |
 |---|---|---|
-| `governance/` | 용어집·도메인 — **정의의 원천** | 도메인 전문가 |
-| `transform/` | SQL 변환(dbt: SLV→CORE→GOLD) | 리소스 담당자 |
-| `platform/` | dags(오케스트레이션)·extract(수집)·common(커넥터)·infra(배포) | 시스템 담당자 |
-| `quality/` | 헬스 런북·점검 쿼리 (CTL 뷰·dbt test·OpenMetadata) | 품질·모니터링 |
-| `workspace/` | instructions(지시)·pdca(계획/결과)·patterns·mistakes | 전원 + Agent |
-| `design/` | 설계문서(00~09)·ADR·로드맵 | 설계/아키텍처 |
-| `dev/` | tools(목데이터)·tests(pytest) | 개발 |
+| `governance/` | 용어집·AS-IS 인테이크 기록 — **정의의 원천** | 도메인 전문가·분석가 |
+| `transform/` | dbt 모델 (SLV→GOLD) | 분석가 — **SQL만 추가하면 파이프라인 자동 반영** |
+| `platform/` | dags(Manager/Model DAG 팩토리)·extract·common·infra | 시스템 담당 |
+| `quality/` | 대사 검증(레거시 산출물 vs 신규 모델)·dbt test 정책 | 품질 |
+| `workspace/` | instructions(지시)·pdca(plan→do→check→act) | 전원 + Agent |
+| `design/` | 요구사항·아키텍처·ADR·로드맵 | 설계 |
 
-> **영역별 저작 규칙은 각 폴더의 CLAUDE.md에 있다** (platform/transform/governance/quality/workspace). 해당 폴더에서 작업하면 자동 로드된다 — 이 파일에 중복 기재하지 않는다.
+> 영역별 저작 규칙은 각 폴더의 CLAUDE.md에 있다 — 해당 폴더에서 작업하면 자동 로드된다. 이 파일에 중복 기재하지 않는다.
 
 ## Agent 운영 규약
 1. **지시는 `workspace/instructions/*.md`** 에서 읽는다 (목표/범위/제약/완료조건).
-2. **계획·실행결과는 `workspace/pdca/<feature>/`** 에 남긴다: plan→do→check→act. 성공 패턴 → `patterns/`, 실패 교훈 → `mistakes/`.
+2. **계획·실행결과는 `workspace/pdca/<feature>/`** 에 남긴다: plan→do→check→act.
 3. 정의(용어·지표)는 **`governance/` 가 단일 원천** — 작업 전 먼저 확인.
-4. 크로스세션 지속 사실 = Claude Code 파일 메모리(`.claude/.../memory`).
+4. AS-IS 발굴(인터뷰→논리 기록→SQL화→대사 검증)은 [governance/intake/TEMPLATE.md](governance/intake/TEMPLATE.md)를 따른다.
+5. 크로스세션 지속 사실 = Claude Code 파일 메모리(`.claude/.../memory`).
 
 ## 불변 규칙
-- **호스트/컨테이너 분리**: 호스트 트리는 역할 기반(사람용), 컨테이너 안은 `/opt/airflow/{dags,extract,common,transform}` 관례 유지(기계용) — 번역은 docker-compose 마운트가 담당. import 문자열·Cosmos 경로는 컨테이너 기준. → [adr/0004](design/adr/0004-role-based-tree.md)
-- **북극성**: Airflow 파싱/실행 경로에 LLM 금지 — 결정론적 제어평면. Agent는 오프라인 저작만.
-- **패키징**: PYTHONPATH-루트(설치형 패키지 없음). 폐쇄망 전제. → [design/08](design/08_AIRGAP_BUILD.md) · [adr/0003](design/adr/0003-airgap-packaging.md)
-- **시크릿**: 크리덴셜/JWT는 `.env`(→ [.env.example](.env.example))로만. 커밋 금지.
+- **분석가 셀프서비스**: dbt 모델(.sql) 추가만으로 DAG가 자동 생성된다 — 모델 추가에 개발자 코드 작업이 필요해지면 설계 위반. → [design/03_DAG_DESIGN.md](design/03_DAG_DESIGN.md)
+- **Manager/Model DAG**: dbt manifest 파싱 → 모델별 Model DAG + 의존성 트리거·복구 Manager DAG. 파싱·실행 경로는 결정론적 — **런타임 LLM 금지**, Agent는 오프라인 저작만. → [adr/0002](design/adr/0002-manager-model-dynamic-dag.md)
+- **정의 우선**: 운영 계층(slv/gold) 승격 전 glossary 정의 확정 — 이관 모델은 대사 검증도 통과. 탐색은 `wrk` 실험 계층에서 자유. → [design/07](design/07_AUTHORING_FLOW.md)
+- **시크릿**: 크리덴셜은 `.env`로만. 커밋 금지.
+- **사내망 전제**: 폐쇄망·프록시 환경 — 원격 이식은 [design/05_INFRA.md](design/05_INFRA.md) 체크리스트를 따른다.
 
-세부 사용법 → [README.md](README.md), 구조 근거 → [design/02](design/02_DIRECTORY_STRUCTURE.md).
+세부 사용법 → [README.md](README.md).
