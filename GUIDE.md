@@ -32,6 +32,29 @@ Publish → 서빙 DB        (+ OpenMetadata: 카탈로그·리니지·용어집
 
 ---
 
+## 트랙 0 — Agent에게 시키기 (모든 트랙의 공통 진입)
+
+사람이 아래 트랙을 직접 밟아도 되지만, 표준 경로는 **지시서를 쓰고 Agent에게 맡기는 것**이다
+(규약: [CLAUDE.md §Agent 운영 규약](CLAUDE.md)). 순서는 항상 같다:
+
+1. **지시서 작성**: [workspace/instructions/TEMPLATE.md](workspace/instructions/TEMPLATE.md)를 복사해
+   `workspace/instructions/<작업명>.md`로 저장하고 목표/범위/제약/완료 조건을 채운다.
+2. **Agent 실행**: "workspace/instructions/<작업명>.md 를 수행하라"고 지시한다.
+3. **결과 검수**: Agent가 남긴 `workspace/pdca/<작업명>/check.md`와 아래 표의 "완료 확인 위치"를 본다.
+
+**하려는 일 → 지시서에 쓸 것 → 완료 확인 위치**
+
+| 하려는 일 | 지시서 핵심 내용 (Agent가 만질 디렉토리) | 근거 문서 | 완료 확인 |
+|---|---|---|---|
+| 신규 소스 온보딩 | `platform/extract/sources.yml` 블록 추가 + `.env` 접속값(직접 준비) | 트랙 1 | Airflow에 `extract__<소스>` DAG + brz 건수 |
+| 신규 데이터 제품 | `governance/glossary.md` 정의 → `transform/models/{slv,gld}/` 모델+테스트 → manifest 갱신 | 트랙 2 · [design/07](design/07_AUTHORING_FLOW.md) | `model__*` DAG 편입 + dbt test + OM 등재 |
+| 레거시 로직 이관 (AS-IS) | `governance/intake/` 기록 → 모델화 → `quality/reconciliation/` 대사 통과 | [design/04](design/04_AS_IS_INTAKE.md) · [intake TEMPLATE](governance/intake/TEMPLATE.md) | 대사 결과 = 레거시 산출물과 일치 |
+| 지표·용어 정의 변경 | `governance/` 먼저 수정 → 영향 모델을 slv에서 흡수 | [design/07 §2](design/07_AUTHORING_FLOW.md) | glossary diff + 하류 모델 재실행 green |
+| 서빙 반영 추가 | 모델 config `meta={'publish_to': 'srv.<이름>'}` 한 줄 + manifest 갱신 | [design/08 §1.1](design/08_DATA_OPS.md) | Manager에 `publish__<모델>` 태스크 + 서빙 건수 |
+| 인프라·운영 변경 | `platform/infra/` (compose·init·ops) | [design/05](design/05_INFRA.md) · [infra/README](platform/infra/README.md) | 스택 healthy + 관련 런북 갱신 |
+
+> 지시서 없는 작업 금지(workspace 규약). 정의가 걸린 일은 **governance가 먼저**다.
+
 ## 트랙 1 — 신규 소스 온보딩 (운영 DB에 새 데이터가 쌓이기 시작했다)
 
 담당: 시스템(platform). 파이썬 코드 작업 없음 — 선언 1블록.
@@ -78,10 +101,33 @@ Publish → 서빙 DB        (+ OpenMetadata: 카탈로그·리니지·용어집
    MSYS_NO_PATHCONV=1 docker exec openmetadata_ingestion bash -c \
      "cd /opt/airflow/transform && DBT_TARGET_PATH=/tmp/dbt_manifest DBT_LOG_PATH=/tmp/dbt_manifest /opt/airflow/dbt_venv/bin/dbt parse"
    docker cp openmetadata_ingestion:/tmp/dbt_manifest/manifest.json ../../transform/manifest.json
+   python ops/render_lineage.py          # 계보 문서(transform/LINEAGE.md) 재생성 — manifest와 함께 커밋
    ```
 6. **확인**: Airflow에 `model__<모델명>` DAG가 생기고 Manager 위상에 편입된다.
    다음 extract 적재부터 자동 실행 — 급하면 Manager를 수동 트리거.
 7. **커밋**: 모델 .sql + yml + glossary + manifest.json 을 함께 커밋한다.
+
+## 계보·의존성 어디서 보나
+
+한 화면씩 역할이 다르다 — **Airflow는 "돌았는가", OpenMetadata는 "어디서 왔는가", 서빙 DB는 "결과가 맞는가"**.
+
+| 보고 싶은 것 | 어디서 | 비고 |
+|---|---|---|
+| **모델 간 실행 순서·의존** | Airflow → `manager__pcs_transform` → **Graph** 탭 | `trigger__*` 태스크가 dbt 의존 그래프의 토폴로지 순 배선. Model DAG가 낱개로 보이는 건 의도된 설계([adr/0002](design/adr/0002-manager-model-dynamic-dag.md)) |
+| manager→model 소속 관계 | Airflow → **DAG Dependencies** | manager 중심 별모양 |
+| extract→변환 트리거 | Airflow → **Assets** 그래프 | extract가 발행하는 Asset을 Manager가 구독 |
+| **테이블·컬럼 데이터 계보** | OpenMetadata(:8585) → 테이블 → **Lineage** 탭 | brz→slv→gld 체인. 용어 쪽 진입: Govern → Glossary → 용어 → 연결 자산 |
+| 전 경로 정적 문서 (오프라인·리뷰) | [transform/LINEAGE.md](transform/LINEAGE.md) | manifest에서 자동 생성 — 아래 참고 |
+
+**언제 어떤 화면을 보나 (역할)**
+- **소비자**(데이터 쓰는 사람·도구): 서빙 Oracle만 조회 — Airflow·OM 필요 없음.
+- **저작자**(분석가): warehouse+dbt로 개발, Airflow는 자기 `model__*` 상태 확인·sbx 수동 트리거만.
+- **운영자**: Airflow가 관제 창구 — 실패 진단(로그), 복구(실패 trigger clear → 하위만 재실행), 백필.
+  지향점은 평시 무관심 + notifier 알림 기반 대응.
+
+**OM 리니지가 안 보일 때**: 계보는 서비스(pcs_warehouse) 화면이 아니라 **테이블 단위**다 —
+검색 → 테이블 → Lineage 탭. 그래도 엣지가 없으면 인제스천이 아직 안 돈 것(스케줄 일 1회):
+Settings → Services → Databases → pcs_warehouse → **Agents** 탭에서 metadata → dbt 순으로 수동 Run.
 
 ## FAQ
 

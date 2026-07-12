@@ -6,7 +6,7 @@ Phase 2(infra)·Phase 3(dags/extract/common)에서 코드가 들어올 자리.
 |---|---|
 | `dags/` | DAG 팩토리 2종 — `factory__extract.py`(sources.yml 파싱) · `factory__pcs_transform.py`(manifest 파싱) |
 | `extract/` | `sources.yml`(소스 선언 — **신규 소스는 여기 블록 추가가 전부**) + 범용 로더(snapshot) |
-| `common/` | pg 접속·ctl 기록, notifier, publish, Asset 파생 |
+| `common/` | pg(warehouse)·db(소스/서빙 방언 디스패치) 접속, ctl 기록, notifier, publish, Asset 파생 |
 | `infra/` | OpenMetadata+Airflow compose 스택 (→ [design/05](../design/05_INFRA.md)) |
 
 ## 불변 규약

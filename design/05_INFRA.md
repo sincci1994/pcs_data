@@ -20,6 +20,8 @@
 | dbt-core / dbt-postgres | 1.11.12 / 1.10.2 | 별도 venv 격리 |
 | Elasticsearch | 9.3.0 | OM quickstart 기본 |
 | dbt 웨어하우스 | postgres:16-alpine | 원격에선 기존 DB로 치환 |
+| oracledb (제품명 python-oracledb) | 4.0.1 | airflow 본체 환경 — 실 EES 는 thick(Instant Client 는 `vendor/` 반입 시 베이크) |
+| Oracle Free (로컬 실습 전용) | gvenzl/oracle-free:23.26.2-slim-faststart | practice-oracle 프로파일 — **폐쇄망 번들 미포함** (번들러 가드) |
 
 > 舊 계획의 astronomer-cosmos는 Manager/Model 재설계([adr/0002](adr/0002-manager-model-dynamic-dag.md))로 **제외** — 커스텀 이미지에서 cosmos 설치 불필요.
 
@@ -33,6 +35,7 @@
 | `openmetadata-server` | 유지 (`PIPELINE_SERVICE_CLIENT_ENDPOINT: http://ingestion:8080`) |
 | `ingestion` | **수정**: `build:` 커스텀 이미지. entrypoint는 공식 그대로(초기화 체인 담당 — 별도 airflow-init 불필요·admin은 SimpleAuthManager 기본 admin/admin). env(DBT_*, TZ)·volumes·depends_on(warehouse healthy) 추가 |
 | `warehouse` | **신규**: postgres:16-alpine, `5433:5432`, healthcheck, named volume |
+| `oracle` | **신규(로컬 실습 전용)**: practice-oracle 프로파일 게이트 — 소스(src)·서빙(pcs_srv) 겸용 Oracle Free, `oracle-init/` 1회 시드 (→ [infra/README](../platform/infra/README.md)) |
 
 커스텀 이미지 (dbt는 의존성 충돌 방지 위해 venv 격리):
 
@@ -66,5 +69,5 @@ USER airflow
 4. 기존 OM DB/ES named volume 백업 후 migrate; Airflow 메타DB 초기화 허용 여부 사전 확인. 운영 개시 후에는 Airflow 메타DB·OM DB **상시 백업**을 Phase 2 산출물로 구성 (warehouse는 소모성 — 백업 불요, → [08 §1](08_DATA_OPS.md)).
 5. `vm.max_map_count` 영구 설정, `.env` 비밀번호 전면 교체, 내부 포트 외부 노출 차단.
 6. server/ingestion/postgresql 이미지 3태그 동일 버전 규칙.
-7. 사내망(폐쇄망·프록시·사설 CA) 빌드 인자 — 이전 구현의 처리 방식은 git 히스토리(`8716803`) 참조.
+7. 사내망(폐쇄망·프록시·사설 CA) 빌드 — 구현 완료: 프록시/미러는 `.env`→build.args, 사설 CA 는 `certs/`, Instant Client 는 `vendor/`, 이미지 tar 반출입은 번들러. 절차: [platform/infra/ops/README.md](../platform/infra/ops/README.md).
 8. **배포 동기화**: "커밋 → DAG 자동 생성"이 성립하려면 서버가 저장소를 clone하고 주기적 `git pull`(또는 배포 스크립트)로 dags/·dbt/를 갱신해야 한다 — 반영 지연 허용치와 함께 방식 확정 (Phase 2).

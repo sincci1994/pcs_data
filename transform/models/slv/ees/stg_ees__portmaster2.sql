@@ -1,5 +1,7 @@
 -- PortMaster2 표준화 — 원천값 보존, 레거시 01 스크립트의 유효행 필터만 승계 (비즈니스 판단 없음).
 -- 소스가 바뀌면 이 모델과 _ees__sources.yml 만 수정한다 — 하류(gld)는 ref() 그래프로 자동 재정의.
+-- 서빙: 소비 조회는 Oracle 로 통일 — SLV 도 publish (→ design/08 질의 경계).
+{{ config(meta={'publish_to': 'srv.stg_ees__portmaster2'}) }}
 select distinct
     eqp_id,
     eqp_chamber_id,

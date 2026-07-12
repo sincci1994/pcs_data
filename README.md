@@ -68,6 +68,8 @@ design/       요구사항 · 아키텍처 · ADR · 로드맵
 | 2 | 인프라: OpenMetadata+Airflow compose 스택 로컬 검증 | 완료 (2026-07-09) → [platform/infra/README.md](platform/infra/README.md) |
 | 3 | 코드: Manager/Model DAG 팩토리 · dbt 프로젝트 · extract | **완료 (2026-07-09)** — 로컬 E2E 통과 → [design/03](design/03_DAG_DESIGN.md) |
 | 4 | 첫 데이터 제품: Equipment/Pipe 기준정보 (로컬) | **완료 (2026-07-09)** — 대사 일치 → [design/09](design/09_SCENARIO_EQUIPMENT_PIPE.md) |
-| 5 | 원격 이식: EES 실접속·pcs_data 서버 배포 | 예정 → [design/05 체크리스트](design/05_INFRA.md) · [design/09 미확정](design/09_SCENARIO_EQUIPMENT_PIPE.md) |
+| 5 | 원격 이식: 프록시 빌드→폐쇄망 반입 경로 | **준비 완료 (2026-07-10)** — 로컬 검증, 실행은 후순위 → [ops/README](platform/infra/ops/README.md) |
+| 6 | 운영 유사 로컬: Oracle 왕복(소스→변환→서빙)·사용 가이드·계보 | **완료 (2026-07-11)** — SLV+GOLD Oracle 서빙 실증 → [design/08 §1.1](design/08_DATA_OPS.md) · [GUIDE 트랙 0](GUIDE.md) |
+| — | 원격 전환 잔여: EES 실접속·pcs_data 배포 | 조직 이슈 대기 → [design/05 체크리스트](design/05_INFRA.md) · [design/09 미확정](design/09_SCENARIO_EQUIPMENT_PIPE.md) |
 
 이전 구현(Cosmos 기반 SCADA 샘플)은 git 히스토리(`db02606` 이전)에서 참조 가능.

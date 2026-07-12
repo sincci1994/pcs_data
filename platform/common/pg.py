@@ -1,7 +1,6 @@
-"""warehouse/소스 Postgres 접속 + ctl 기록 헬퍼.
+"""warehouse Postgres 접속 + ctl 기록 헬퍼 (warehouse 전용 — 소스·서빙 크로스 DB 는 db.py).
 
 크리덴셜은 전부 컨테이너 env(.env 유래)로만 받는다 — 하드코딩·기본 비밀번호 금지.
-소스가 Oracle 인 원격 환경에서는 extract 모듈이 소스 접속만 교체한다 (이 모듈은 warehouse 전용 + 로컬 목소스 겸용).
 """
 import os
 from contextlib import contextmanager
@@ -25,18 +24,6 @@ def wh_conn(autocommit: bool = False):
     """warehouse 접속 (파이프라인 롤). 기본은 명시적 트랜잭션 — 멱등 적재는 단일 tx 로 묶는다."""
     conn = psycopg2.connect(**_dsn("PCS_WH"))
     conn.autocommit = autocommit
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
-@contextmanager
-def src_conn():
-    """소스 접속 (로컬 검증 = warehouse 내 src 목스키마). 읽기 전용 사용.
-    server-side(named) 커서는 트랜잭션을 요구하므로 autocommit 을 켜지 않는다."""
-    conn = psycopg2.connect(**_dsn("PCS_SRC"))
-    conn.set_session(readonly=True)
     try:
         yield conn
     finally:

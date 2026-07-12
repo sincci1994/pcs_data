@@ -34,7 +34,9 @@ dim_equipment (8종 노드) · dim_pipe (6종 엣지) · dim_vendor  (스키마 
 ## 미확정 (사내 확인)
 1. **EES(pcsdb) 직접 접속 권한** — 레거시 자동화 선결과제 1. 확보 전까지 원격 이식 불가.
 2. 조직·holiday 실소스 연동 시점 (v1 더미 시드의 교체 시점).
-3. 서빙(pipe-scheduler-db) 반영 방식 — 직접 커넥션 vs CSV 핸드오프 (04 검증 스크립트 게이트화 포함).
+3. ~~서빙(pipe-scheduler-db) 반영 방식~~ → **직접 커넥션 publish 로 확정** (2026-07-11) — 크로스 DB
+   publish(oracledb)가 로컬 Oracle Free 왕복으로 실증 (→ design/08 §1.1). 잔여: 실 pipe-scheduler-db
+   접속값 확보 (04 검증 스크립트 게이트화 포함).
 4. 대상 설비 범위 확대 시 명세 (현재 검증 샘플 3설비 → 실 PortMaster2 전체).
 
 ## 완료 조건 — **전 항목 통과 (2026-07-09 로컬 E2E)**

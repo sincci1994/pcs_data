@@ -1,15 +1,15 @@
 """범용 전량 스냅샷 로더 — sources.yml 선언으로 구동 (mode: snapshot).
 
 멱등성 = warehouse 단일 트랜잭션 delete+insert (재시도가 중복 행을 만들면 실패 — 규칙 1).
-소스 드라이버: 로컬 검증 = Postgres. 원격 실 EES(Oracle)는 python-oracledb 접속·
-ALL_TAB_COLUMNS 계약 체크 분기 추가 필요 (이미지에 드라이버 베이크, → design/05 체크리스트 7).
+소스 드라이버는 common/db.py 가 env({conn}_DRIVER)로 디스패치 — postgres(기본)·oracle(실 EES,
+ALL_TAB_COLUMNS 계약 체크·chunked fetch 포함). warehouse 쓰기는 항상 Postgres(pg.py).
 mode: watermark(증분+lookback)는 선언만 예약 — 센서 시나리오(design/06) 재개 시 구현.
 """
 import logging
 
 import psycopg2.extras
 
-from common import pg
+from common import db, pg
 
 log = logging.getLogger("pcs.extract.snapshot")
 
@@ -28,14 +28,8 @@ def load(source_name: str, src: dict, dag_id: str, logical_date, run_id: str) ->
     schema, table = src["table"].split(".")
     target = src["target"]
 
-    # pre-flight 계약 체크 (조용한 드리프트 금지, → design/08 §6)
-    with pg.src_conn() as conn, conn.cursor() as cur:
-        cur.execute(
-            "SELECT column_name FROM information_schema.columns "
-            "WHERE table_schema = %s AND table_name = %s",
-            (schema, table),
-        )
-        actual = {r[0] for r in cur.fetchall()}
+    # pre-flight 계약 체크 (조용한 드리프트 금지, → design/08 §6) — 방언은 db.py 가 분기
+    actual = db.fetch_columns(src["conn"], schema, table)
     if not actual:
         raise RuntimeError(f"소스 테이블 부재: {src['table']}")
     missing = set(src["expected_columns"]) - actual
@@ -55,19 +49,14 @@ def load(source_name: str, src: dict, dag_id: str, logical_date, run_id: str) ->
 
     pg.audit_start(dag_id, logical_date, run_id)
     try:
-        with pg.src_conn() as sconn, pg.wh_conn() as wconn:
-            scur = sconn.cursor(name=f"{source_name}_fetch")   # server-side cursor
-            scur.itersize = FETCH_CHUNK
-            scur.execute(select_sql)
-
+        with db.connect(src["conn"], readonly=True) as sconn, pg.wh_conn() as wconn:
             with wconn.cursor() as wcur:
                 wcur.execute(ddl)
                 wcur.execute(f"DELETE FROM {target}")
                 total = 0
-                while True:
-                    rows = scur.fetchmany(FETCH_CHUNK)
-                    if not rows:
-                        break
+                for rows in db.fetch_chunks(
+                    sconn, src["conn"], select_sql, FETCH_CHUNK, name=f"{source_name}_fetch"
+                ):
                     psycopg2.extras.execute_values(wcur, insert_sql, rows, page_size=FETCH_CHUNK)
                     total += len(rows)
 

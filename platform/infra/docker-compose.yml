@@ -30,6 +30,7 @@ volumes:
   es-data:
   db-data-postgres:
   warehouse-data:
+  oracle-data:
 services:
   postgresql:
     container_name: openmetadata_postgresql
@@ -547,11 +548,20 @@ services:
       PCS_DBT_USER: ${PCS_DBT_USER:-dbt_exec}
       PCS_DBT_PASSWORD: ${PCS_DBT_PASSWORD:?.env에 PCS_DBT_PASSWORD 필요}
       # --- PCS 추가: extract 소스 접속 (로컬 = warehouse 내 src 목스키마 / 원격 = 실 EES) ---
+      # 드라이버는 env 로만 선택 (postgres|oracle) — 선언·코드는 환경 불변 (→ common/db.py)
+      PCS_SRC_DRIVER: ${PCS_SRC_DRIVER:-postgres}
       PCS_SRC_HOST: ${PCS_SRC_HOST:-warehouse}
       PCS_SRC_PORT: ${PCS_SRC_PORT:-5432}
       PCS_SRC_DB: ${PCS_SRC_DB:-pcs_wh}
       PCS_SRC_USER: ${PCS_SRC_USER:-dbt_exec}
       PCS_SRC_PASSWORD: ${PCS_SRC_PASSWORD:-}
+      # --- PCS 추가: publish 서빙 대상 (기본 postgres = warehouse srv 스키마 → PCS_SRV_* 미사용) ---
+      PCS_SRV_DRIVER: ${PCS_SRV_DRIVER:-postgres}
+      PCS_SRV_HOST: ${PCS_SRV_HOST:-}
+      PCS_SRV_PORT: ${PCS_SRV_PORT:-}
+      PCS_SRV_DB: ${PCS_SRV_DB:-}
+      PCS_SRV_USER: ${PCS_SRV_USER:-}
+      PCS_SRV_PASSWORD: ${PCS_SRV_PASSWORD:-}
       # --- PCS 추가: /opt/airflow 루트 패키지(common·extract) import ---
       PYTHONPATH: /opt/airflow
       DBT_PROFILES_DIR: /opt/airflow/transform
@@ -629,6 +639,37 @@ services:
       interval: 15s
       timeout: 10s
       retries: 10
+
+  # [로컬 실습 전용 — practice-oracle 프로파일] 운영 Oracle 시뮬레이션: EES 소스(src)와
+  # 서빙(pcs_srv)을 한 인스턴스가 겸해 오라클 왕복(소스→변환→서빙) 위상을 재현 (→ design/08).
+  # 폐쇄망 번들 반입 금지 — 프로파일 비활성이 기본이라 ops/airgap_images.sh 목록에서 제외(가드 포함).
+  # 기동: docker compose --profile practice-oracle up -d oracle (첫 부팅 초기화 수 분 소요)
+  # 메모리 ~1.5-2.5GB 추가 — 전체 스택 기준 Docker Desktop 8GB 이상 권장.
+  oracle:
+    container_name: pcs_oracle
+    image: gvenzl/oracle-free:23.26.2-slim-faststart
+    profiles: ["practice-oracle"]
+    restart: always
+    environment:
+      # 빈값이면 컨테이너가 기동 자체를 거부(fail-loud) — 시크릿 기본값 폴백 아님.
+      # ':?' 필수화는 프로파일 비활성 시에도 compose 보간이 평가해 기본 up 을 깨므로 쓰지 않는다.
+      ORACLE_PASSWORD: ${PCS_ORACLE_ADMIN_PASSWORD:-}
+      # oracle-init 스크립트가 src/pcs_srv 사용자 생성에 사용
+      PCS_ORA_SRC_PASSWORD: ${PCS_ORA_SRC_PASSWORD:-}
+      PCS_ORA_SRV_PASSWORD: ${PCS_ORA_SRV_PASSWORD:-}
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./oracle-init:/container-entrypoint-initdb.d:ro
+    networks:
+      - app_net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 3m
 
 networks:
   app_net:

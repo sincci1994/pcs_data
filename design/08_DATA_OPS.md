@@ -8,10 +8,26 @@
 |---|---|---|
 | 운영 Oracle (소스) | 원본 장기 보관 | **5년** |
 | warehouse Postgres | **변환 연산 자원 전용** — 작업 윈도(rolling window)만 보유 | 윈도 밖 파티션 drop |
-| 서빙 DB (운영 DB 또는 별도 DB) | GOLD 산출물 적재·이력 축적 | 서빙 DB 측 정책 (5년 협의 → roadmap) |
+| 서빙 DB (운영 DB 또는 별도 DB) | **SLV 표준화 산출물 + GOLD 산출물** 적재·이력 축적 | 서빙 DB 측 정책 (5년 협의 → roadmap) |
 
 warehouse에 데이터가 무한 축적되어 publish·스캔이 선형 증가하는 구조 자체를 배제한다.
-warehouse는 언제든 소스에서 재적재 가능한 **소모성 작업 공간**이다.
+warehouse는 언제든 소스에서 재적재 가능한 **소모성 작업 공간**이다 — 그 안의 SLV/GLD 는
+**계산 캐시**이지 정본이 아니며 백업 대상이 아니다.
+
+로컬 실습에서는 `practice-oracle` 프로파일의 Oracle Free 가 소스(src)와 서빙(pcs_srv)을 겸해
+운영 위상(오라클 왕복)을 재현한다 — warehouse `srv` 스키마는 기본(postgres) 대역으로 유지
+(→ [platform/infra/README.md](../platform/infra/README.md)).
+
+### 1.1 질의 경계 [확정]
+
+- **소비자(다운스트림 앱·현업 질의·타 도구) → 서빙 Oracle만 본다.** SLV 까지 publish 하므로
+  소비자는 warehouse 의 존재를 몰라도 된다.
+- **저작자(분석가 dbt 개발·sbx 실험) → warehouse만 쓴다.** dbt 가 warehouse 에서 실행되므로
+  모델 작성·실험 결과 확인은 warehouse 접속이 전제다.
+- warehouse 는 소비 트래픽을 받지 않으므로 rolling window·파티션 drop 이 소비자 SLA 와
+  결합하지 않는다.
+- `publish_to` 의 `srv` 는 **논리 네임스페이스**: postgres 대역 = `srv` 스키마,
+  Oracle 서빙 = `<PCS_SRV_USER 대문자>` 소유 스키마 (→ platform/common/publish.py).
 
 ## 2. 볼륨 산정 워크시트
 
@@ -41,6 +57,9 @@ warehouse 상주량   = 일 유입량 × 작업 윈도 일수 × 행 크기
 | 대규모 (설비×일 grain 등) | **윈도 교체** — 최근 N일 delete+insert, 과거분 불변 |
 
 **원자성 불변조건**: staging 적재 → 단일 트랜잭션 swap(또는 트랜잭션 내 교체). 소비자는 항상 완전한 직전 스냅샷 또는 완전한 신규 스냅샷만 본다. 실패 시 이전 상태 보존 (TRUNCATE 후 INSERT 금지).
+
+**규모 제어는 세 개의 독립 손잡이로 한다** (SLV 서빙 추가로 늘어나는 비용의 통제 지점):
+① warehouse 작업 윈도 축소(§2 — 변환 비용) ② publish 전량 교체→윈도 교체 전환(위 표 — 전송 비용, 대규모 grain 등장 시 구현) ③ Oracle 서빙 측 보존·파티션 정책(§1 — 저장 비용).
 
 ## 4. 지연 도착 데이터 [확정: 2단 방어]
 

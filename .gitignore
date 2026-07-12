@@ -19,6 +19,11 @@ transform/package-lock.yml
 logs/
 airflow.db
 
+# infra 반입물 (환경별 산출물 — 커밋 금지, → platform/infra/ops/README.md)
+platform/infra/certs/*.crt
+platform/infra/vendor/*.zip
+platform/infra/dist/
+
 # os / editor
 .DS_Store
 Thumbs.db
