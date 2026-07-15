@@ -11,18 +11,14 @@ __pycache__/
 venv/
 
 # dbt
-transform/target/
-transform/dbt_packages/
-transform/package-lock.yml
+dbt/target/
+dbt/dbt_packages/
+dbt/package-lock.yml
+dbt/logs/
 
 # airflow / docker runtime
 logs/
 airflow.db
-
-# infra 반입물 (환경별 산출물 — 커밋 금지, → platform/infra/ops/README.md)
-platform/infra/certs/*.crt
-platform/infra/vendor/*.zip
-platform/infra/dist/
 
 # os / editor
 .DS_Store
