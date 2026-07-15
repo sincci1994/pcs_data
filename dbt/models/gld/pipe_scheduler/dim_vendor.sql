@@ -1,6 +1,7 @@
--- 협력사(제조사) 기준정보 — PortMaster2 등장 maker 자동 생성 (레거시 01 §6 승계).
--- surrogate id 는 서빙 import 시점 책임 — gld 는 natural key(code) (→ design/09 확정 3).
-{{ config(materialized='table', meta={'publish_to': 'srv.vendor'}) }}
+-- 협력사(제조사) 기준정보 — PortMaster2 등장 maker 자동 생성 (레거시 승계).
+-- gld 는 natural key(code = seqp_maker) — surrogate id 는 소비 측 책임.
+-- 컬럼: code(제조사 자연키) / name(v1 = 코드와 동일, 실명칭은 후속 큐레이션)
+--       / type_code(고정 EQUIPMENT) / description(생성 출처)
 select distinct
     seqp_maker as code,
     seqp_maker as name,

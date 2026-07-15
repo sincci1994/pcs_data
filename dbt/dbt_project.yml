@@ -1,5 +1,5 @@
 # PCS 변환 프로젝트 — 계층: brz(소스, dbt 모델 아님) → slv → gld + sbx(실험)
-# 명명·폴더 규칙 정본: design/10_NAMING_ORGANIZATION.md
+# 명명: slv 는 stg_<소스>__<엔티티>, gld 는 비즈니스명(dim_/fct_), 폴더는 slv/<소스>·gld/<도메인>
 name: pcs_transform
 version: "1.0.0"
 profile: pcs_warehouse
@@ -12,7 +12,7 @@ target-path: "target"
 
 seeds:
   pcs_transform:
-    +schema: slv   # seed = 큐레이션 참조 데이터 (수기표의 관리 테이블 승격, → design/09)
+    +schema: slv   # seed = 큐레이션 참조 데이터 (수기표의 관리 테이블 승격)
 
 models:
   pcs_transform:
@@ -25,5 +25,5 @@ models:
     sbx:
       +schema: sbx
       +materialized: table
-      # sbx 는 실험 계층 — 수동 실행 전용, Manager/Publish/OM 제외 (→ design/07)
+      # sbx 는 실험 계층 — 자유 탐색용, 검증(테스트) 후 slv/gld 로 승격
       +tags: ["sbx"]

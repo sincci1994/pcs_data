@@ -1,12 +1,9 @@
+# 소스 설명은 dags/lib/sources.yml 과 slv 모델 헤더에 — 이 파일은 소스 선언만.
 version: 2
 
 sources:
   - name: brz_ees
-    description: "EES 유래 bronze — Extract 가 적재하는 원형 보존 계층 (→ design/02·10)"
     schema: brz
     tables:
       - name: ees__portmaster2
-        description: >
-          EES PortMaster2 전량 스냅샷 (extract__ees_portmaster2). 행 = 설비×챔버×경로×서브설비.
-          소스 변경 시 이 선언과 slv 모델만 수정한다 — gld 는 소스를 직접 참조하지 않는다 (→ design/07).
         loaded_at_field: loaded_at

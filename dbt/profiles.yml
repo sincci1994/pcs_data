@@ -1,5 +1,5 @@
-# dbt 접속 프로필 — 크리덴셜은 전부 env_var (컨테이너 env ← .env). 하드코딩 금지.
-# 컨테이너에서 DBT_PROFILES_DIR=/opt/airflow/transform 로 참조된다.
+# dbt 접속 프로필 — 크리덴셜은 전부 env_var (컨테이너 env). 하드코딩 금지.
+# Cosmos ProfileConfig 가 이 파일을 직접 참조한다 (dags/transform_dbt.py).
 pcs_warehouse:
   target: dev
   outputs:

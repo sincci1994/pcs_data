@@ -1,15 +1,15 @@
-# 소스 선언 — 이 파일의 블록 1개 = extract DAG 1개 + Asset 자동 생성 (→ design/03·10, GUIDE.md)
+# 소스 선언 — 이 파일의 블록 1개 = extract DAG 1개 + Asset 자동 생성
 # 신규 소스 추가는 여기에 블록을 추가하는 것으로 끝난다 (파이썬 코드 작업 불필요).
 #
 # 필드:
 #   conn             : 접속 env 접두사 (PCS_SRC → PCS_SRC_HOST/PORT/DB/USER/PASSWORD)
 #   table            : 소스 테이블 (schema.table)
 #   mode             : snapshot(전량 교체 — 기준정보·소용량) | watermark(증분+lookback — 계속 쌓이는
-#                      누적형 소스용, 미구현: 첫 누적형 소스 실명세 확보 시 구현 → design/03 캐던스)
-#   target           : bronze 테이블 (brz.<소스>__<엔티티> — design/10 명명)
+#                      누적형 소스용, 미구현: 첫 누적형 소스 실명세 확보 시 구현)
+#   target           : bronze 테이블 (brz.<소스>__<엔티티>)
 #   schedule         : cron (Asia/Seoul) — 파이프라인 전체 캐던스의 유일한 결정 지점.
 #                      소스 적재 주기(grain)가 아니라 배치 추출 주기를 적는다
-#                      (예: 소스가 5분 집계로 쌓여도 추출은 3시간 배치 → design/03 캐던스)
+#                      (예: 소스가 5분 집계로 쌓여도 추출은 3시간 배치)
 #   expected_columns : pre-flight 계약 체크 대상 (누락 시 fail-fast + 알림)
 #   filter           : (선택) 추출 WHERE 절 — 리터럴 SQL 조건식
 

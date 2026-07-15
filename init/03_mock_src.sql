@@ -1,6 +1,5 @@
--- [로컬 검증 전용] EES PortMaster2 목데이터 — 원격에선 실 EES(Oracle)가 소스라 이 스키마 자체가 없다.
--- 샘플: 레거시 검증 완료 3설비 47행 (pipe-scheduler-works/레거시전처리코드/검증샘플/sourcedata.md 그대로).
--- 적용: docker exec -i pcs_warehouse psql -U pcs_admin -d pcs_wh < platform/infra/mock/seed_src_portmaster2.sql
+-- [로컬 검증 전용] EES PortMaster2 목데이터 — 실서버에선 실 EES(Oracle)가 소스라 이 스키마 자체가 없다.
+-- 샘플: 레거시 검증 완료 3설비 47행. 최초 기동 init 으로 자동 적용 (권한은 04_mock_grants.sh).
 
 CREATE SCHEMA IF NOT EXISTS src;
 

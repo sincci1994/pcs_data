@@ -1,0 +1,62 @@
+# PCS 로컬 스택 — warehouse Postgres + Airflow standalone (Cosmos + dbt)
+# 기동: docker compose up -d --build  →  http://localhost:8080 (로컬 실습 — 로그인 생략)
+# 전체 리셋: docker compose down -v  (warehouse 는 소모성 연산 공간 — 정본 아님)
+services:
+  warehouse:
+    image: postgres:16-alpine
+    container_name: pcs_warehouse
+    environment:
+      POSTGRES_USER: pcs_admin
+      POSTGRES_PASSWORD: ${PCS_WH_ADMIN_PASSWORD:-pcs_admin}
+      POSTGRES_DB: pcs_wh
+      PCS_DBT_USER: ${PCS_DBT_USER:-dbt_exec}
+      PCS_DBT_PASSWORD: ${PCS_DBT_PASSWORD:-dbt_pass}
+    ports: ["5433:5432"]
+    volumes:
+      - warehouse-data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pcs_admin -d pcs_wh"]
+      interval: 10s
+      retries: 10
+
+  airflow:
+    build:
+      context: .
+      args:   # 사내 프록시·pip 미러 — 빌드 시점에만 적용, 집/일반망은 비워두면 no-op
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-}
+        PIP_EXTRA_INDEX_URL: ${PIP_EXTRA_INDEX_URL:-}
+    container_name: pcs_airflow
+    command: airflow standalone     # api-server + scheduler + dag-processor + triggerer 단일 컨테이너
+    depends_on:
+      warehouse:
+        condition: service_healthy
+    ports: ["8080:8080"]
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@warehouse/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: Asia/Seoul
+      AIRFLOW_CONN_DEMO_API: http://localhost:8080          # sensor_api_demo 용
+      # warehouse 접속 — dbt profiles.yml 과 extract 로더가 env_var 로 참조
+      PCS_WH_HOST: warehouse
+      PCS_WH_PORT: "5432"
+      PCS_WH_DB: pcs_wh
+      PCS_DBT_USER: ${PCS_DBT_USER:-dbt_exec}
+      PCS_DBT_PASSWORD: ${PCS_DBT_PASSWORD:-dbt_pass}
+      # extract 소스 — 로컬 = warehouse 내 src mock 스키마 (실서버는 Spark 가 Oracle 담당)
+      PCS_SRC_HOST: warehouse
+      PCS_SRC_PORT: "5432"
+      PCS_SRC_DB: pcs_wh
+      PCS_SRC_USER: ${PCS_DBT_USER:-dbt_exec}
+      PCS_SRC_PASSWORD: ${PCS_DBT_PASSWORD:-dbt_pass}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./dbt:/opt/airflow/dbt
+
+volumes:
+  warehouse-data:

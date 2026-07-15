@@ -1,6 +1,6 @@
 """sources.yml 로더 + 스키마 검증 — extract 팩토리와 Asset 파생의 공용 진입점.
 
-결정론 원칙: 선언 파일만 읽는다. 동적 로드에 eval 금지 (platform/CLAUDE.md 규칙 4) —
+결정론 원칙: 선언 파일만 읽는다. 동적 로드에 eval 금지 —
 필드는 화이트리스트 검증을 거친 리터럴 값으로만 쓰인다.
 """
 import re
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 
-SOURCES_PATH = Path("/opt/airflow/extract/sources.yml")
+SOURCES_PATH = Path(__file__).parent / "sources.yml"
 
 _REQUIRED = {"conn", "table", "mode", "target", "schedule", "expected_columns"}
 _MODES = {"snapshot", "watermark"}
@@ -37,6 +37,6 @@ def load_sources() -> dict:
 
 
 def asset_uri(target: str) -> str:
-    """bronze 테이블 → Asset URI (extract 발행 = Manager 구독, 규칙은 design/10)."""
+    """bronze 테이블 → Asset URI (extract 발행 = dbt DAG 구독)."""
     schema, table = target.split(".")
     return f"postgresql://warehouse/pcs_wh/{schema}/{table}"

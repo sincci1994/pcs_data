@@ -1,24 +1,18 @@
+# 컬럼 설명은 모델 .sql 헤더 주석에 — 이 파일은 테스트 정의만.
 version: 2
 
 models:
   - name: stg_smdm__eqp_org_mapping
-    description: "설비→조직 매핑 slv 인터페이스 (v1 원천 = 더미 시드 → SMDM 실연동 시 교체)"
     columns:
       - name: eqp_id
-        description: "메인설비 ID"
         tests: [unique, not_null]
       - name: team_code
-        description: "팀 코드"
         tests: [not_null]
       - name: division_code
-        description: "사업부 코드"
         tests: [not_null]
       - name: site_code
-        description: "사이트 코드"
         tests: [not_null]
       - name: line_code
-        description: "라인 코드"
         tests: [not_null]
       - name: area_code
-        description: "공정 영역 코드"
         tests: [not_null]

@@ -1,6 +1,15 @@
--- 배관 연결 엣지 6종 — 레거시 02 의 검증 완료 로직 이식. code = {from}_{to}_{chamber}.
+-- 배관 연결 엣지 6종 — 레거시 검증 완료 로직 이식. code = {from}_{to}_{chamber}.
+-- 배관 유형: FORELINE / PS / SS / ALLBYPASS / SD1 / SD2.
 -- NOR-only 챔버(BYP 없음)는 SS/ALLBYPASS 만 조건부 미생성 — 나머지 배관 소실 금지.
-{{ config(materialized='table', meta={'publish_to': 'srv.pipe'}) }}
+--
+-- 컬럼:
+--   code                     배관 코드 (전역 유일)
+--   type_code                배관 유형 6종 (위)
+--   main_equipment_code      소속 메인설비          → dim_equipment.code
+--   chamber_code             경로가 속한 챔버 노드   → dim_equipment.code
+--   from/to_equipment_code   시작/끝 노드           → dim_equipment.code
+--   vendor_code              배관 vendor (SS = NOR 스크러버 제조사, 나머지 NULL)
+--   length_m / mtbf_days     길이(m)·MTBF(일) — 종별 고정 기본값 (레거시 승계)
 
 with pm as (
     select * from {{ ref('stg_ees__portmaster2') }}

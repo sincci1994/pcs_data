@@ -1,6 +1,15 @@
--- 설비 계층 노드 8종 — 레거시 02_pcsdb_transform_equipment_pipe.sql 의 검증 완료 로직 이식.
--- 규칙 정의: governance/glossary.md '설비' + 인테이크 기록 §3·4. 규칙 변경 없음(대사 검증 게이트).
-{{ config(materialized='table', meta={'publish_to': 'srv.equipment'}) }}
+-- 배관 스케줄러 설비 계층 노드 8종 — 레거시 검증 완료 변환 규칙의 이식 (규칙 변경 없음).
+-- 노드 유형: MAIN / CHAMBER / PUMP / SCRUBBER / SCRUBBER_NOR_VALVE / SCRUBBER_BYP_VALVE
+--            / SCRUBBER_MERGE / LATERAL_DUCT
+--
+-- 컬럼:
+--   code                설비 노드 코드 (전역 유일)
+--   type_code           노드 유형 8종 (위)
+--   main_equipment_code 소속 메인설비 (MAIN 자신은 NULL). Pair 스크러버는 NOR 소유 설비
+--   team/division/site/line/area_code  조직 코드 (org 매핑 유래)
+--   group_code          프론트 렌더링 묶음 키 — 스크러버군(스크러버·밸브·MERGE)은 스크러버 코드 공유
+--   layer_order         렌더링 레이어 (1=MAIN/CHAMBER, 2=PUMP, 3=SCRUBBER/밸브, 4=MERGE, 5=DUCT)
+--   vendor_code         제조사 자연키 (MAIN/CHAMBER 는 NULL 허용). surrogate id 는 소비 측 책임
 
 with pm as (
     select * from {{ ref('stg_ees__portmaster2') }}

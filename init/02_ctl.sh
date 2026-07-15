@@ -1,7 +1,5 @@
 #!/bin/bash
-# ctl(운영 메타데이터) 테이블 + srv(서빙 대역) 스키마 — 최초 기동 init (01 다음 순서).
-# 기존 볼륨에는 psql 수동 적용. ctl 은 platform 전용 — 분석가 접근 불가 (→ design/02).
-# srv 는 로컬 검증용 서빙 DB 대역 — 실서빙은 외부 DB (→ design/09).
+# ctl(운영 메타데이터) 테이블 — 최초 기동 init (01 다음 순서).
 set -euo pipefail
 
 psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<EOSQL
@@ -14,7 +12,7 @@ CREATE TABLE IF NOT EXISTS ctl.watermark (
     PRIMARY KEY (source_name, table_name)
 );
 
--- ctl.job_audit: run 단위 감사 — dag_id+logical_date 유니크, 재시도는 갱신 (→ platform/CLAUDE.md 규칙 6)
+-- ctl.job_audit: run 단위 감사 — dag_id+logical_date 유니크, 재시도는 갱신
 CREATE TABLE IF NOT EXISTS ctl.job_audit (
     dag_id       varchar(250) NOT NULL,
     logical_date timestamptz  NOT NULL,
@@ -29,10 +27,4 @@ CREATE TABLE IF NOT EXISTS ctl.job_audit (
 
 ALTER TABLE ctl.watermark OWNER TO ${PCS_DBT_USER};
 ALTER TABLE ctl.job_audit OWNER TO ${PCS_DBT_USER};
-
--- srv: Publish 태스크가 원자적 전량 교체로 적재하는 로컬 서빙 대역
-CREATE SCHEMA IF NOT EXISTS srv AUTHORIZATION ${PCS_DBT_USER};
-GRANT USAGE ON SCHEMA srv TO ${PCS_ANALYST_USER};
-ALTER DEFAULT PRIVILEGES FOR ROLE ${PCS_DBT_USER} IN SCHEMA srv
-    GRANT SELECT ON TABLES TO ${PCS_ANALYST_USER};
 EOSQL
