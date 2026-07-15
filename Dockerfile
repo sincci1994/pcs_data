@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir \
         ${PIP_EXTRA_INDEX_URL:+--extra-index-url $PIP_EXTRA_INDEX_URL} \
         astronomer-cosmos==1.15.0
 
+# dbt docs 산출 대역 — named volume 이 이 소유권(airflow)을 물려받는다
+RUN mkdir -p /opt/airflow/dbt_docs
+
 # dbt 는 Airflow 의존성과의 충돌 방지를 위해 전용 venv 에 격리 (Cosmos ExecutionMode.LOCAL)
 RUN python -m venv /opt/airflow/dbt_venv \
     && /opt/airflow/dbt_venv/bin/pip install --no-cache-dir \

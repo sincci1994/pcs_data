@@ -42,6 +42,8 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DEFAULT_TIMEZONE: Asia/Seoul
       AIRFLOW_CONN_DEMO_API: http://localhost:8080          # sensor_api_demo 용
+      # Airflow UI 의 dbt Docs 메뉴 (산출물은 dbt_docs DAG 가 생성) — AF3 플러그인은 JSON 매핑만 읽는다
+      AIRFLOW__COSMOS__DBT_DOCS_PROJECTS: '{"pcs": {"dir": "/opt/airflow/dbt_docs"}}'
       # warehouse 접속 — dbt profiles.yml 과 extract 로더가 env_var 로 참조
       PCS_WH_HOST: warehouse
       PCS_WH_PORT: "5432"
@@ -57,6 +59,8 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./dbt:/opt/airflow/dbt
+      - dbt-docs:/opt/airflow/dbt_docs   # 컨테이너 재생성에도 docs 산출물 유지
 
 volumes:
   warehouse-data:
+  dbt-docs:
