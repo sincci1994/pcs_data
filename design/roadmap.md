@@ -12,3 +12,6 @@
 | 서빙 DB GOLD 이력 보존 정책 협의 (5년) | [08 §1](08_DATA_OPS.md) | 서빙 DB(운영/별도) 확정 시 소유자와 협의 |
 | Deadline Alerts (Airflow SLA 후속 기능) 검토 | [08 §7](08_DATA_OPS.md) | Airflow 버전이 해당 기능 안정화 시 |
 | 크리덴셜 로테이션 절차 | 독립 리뷰 | 원격 운영 개시 |
+| 소비자용 결측 가시화 (내 마트의 상류 상태 뷰) | [11 §6](11_TARGET_ARCHITECTURE.md) | OM 사용 정착 후, 소비자가 OM 리니지+freshness로 부족하다고 실증될 때 |
+| DataLake 카탈로그 I/F 재평가 | [11 §2](11_TARGET_ARCHITECTURE.md) | Lake 안정화가 실증될 때 (현행은 시스템 I/F 지향) |
+| GEMS·EAM 인입 시나리오 선정 | [11 §2](11_TARGET_ARCHITECTURE.md) | SMDM enrichment 정식화 이후 |

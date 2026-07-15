@@ -50,13 +50,14 @@ warehouse.slv (silver — 정제·표준화) → warehouse.gld (gold — 비즈�
 | ① | 변환 위치 | **중앙 warehouse** (Postgres) | 소스/서빙 부하 분리, dbt 표준 패턴 |
 | ② | 서빙 반영 | **볼륨 기준 택일**: 소규모 마트 전량 교체 / 대규모 윈도 교체(최근 N일) — 둘 다 원자적 swap | 전량 교체 단순성은 유지하되 15만 설비×일 grain의 이력 전체 재적재는 배제 (→ [08 §3](08_DATA_OPS.md)) |
 | ⑥ | 서빙 DB 실체 | **운영 DB(Oracle) 또는 별도 DB** — warehouse 아님 | 장기 보관 책임 분리 [확정]. GOLD 이력 보존(5년)은 서빙 DB 측 정책. 소비 원칙: Excel로 재추출하더라도 **원천은 항상 서빙 GOLD**(개인 재가공 재발 방지), 읽기 전용 접근 + OM 카탈로그로 발견 |
-| ③ | 소스 접근 | **별도 시스템에서 주기 제공** | Extract 태스크가 채널 대응. 상세는 원격 환경 확인 후 |
+| ③ | 소스 접근 | **별도 시스템에서 주기 제공** | Extract 태스크가 채널 대응. 상세는 원격 환경 확인 후. I/F 선택지(시스템 I/F 지향 vs DataLake)와 소스 지형은 [11 §2](11_TARGET_ARCHITECTURE.md) |
 | ④ | 오케스트레이션 | **Manager/Model Dynamic DAG** | → [03_DAG_DESIGN.md](03_DAG_DESIGN.md) · [adr/0002](adr/0002-manager-model-dynamic-dag.md) |
 | ⑤ | 변환 엔진 | **dbt-postgres 단일** (PySpark 보류) | → [adr/0003](adr/0003-defer-pyspark-multi-engine.md) |
 
 ## 온톨로지 (요구 4 "비즈니스 정의로 흐름을 본다")
 
 - **정의**: `governance/glossary.md` — 지표·용어의 단일 원천. dbt `schema.yml` 컬럼 설명과 함께 OpenMetadata로 발행.
-- **관계**: dbt `ref()` 그래프(기술 계보) + OpenMetadata Glossary↔테이블 연결(비즈니스 계보).
+- **관계 — 3층 원천** (2026-07-15 형식화): ① 용어↔용어 = glossary 항목의 **관계** 필드(`[[용어명]]` 문법, OM related terms로 발행) ② 테이블·컬럼 = `schema.yml` + relationships 테스트 ③ 자산 계보 = dbt `ref()` 그래프(manifest) → OM 리니지. 지식그래프(GraphRAG 등)가 필요해지면 이 3층을 합치는 것으로 구성한다 — 별도 온톨로지 도구(RDF/OWL) 도입 없음.
 - **흐름 조회**: OpenMetadata UI에서 용어 → 연결 자산 → 리니지로 탐색.
+- **시멘틱 레이어 포지션**: 쿼리 타임 메트릭 계층(MetricFlow·Cube류)은 도입하지 않는다 — "정의 1곳/소비 N곳"은 glossary 정의 → gld 물질화가 **빌드 타임**에 달성하고, 소비자는 서빙 테이블을 직접 읽는다([08 §1.1](08_DATA_OPS.md)). BI 셀프서비스 질의 수요가 실체화될 때 재검토.
 - **운영**: OM ingestion(메타데이터 + dbt artifacts)은 일 1회 스케줄 파이프라인으로 platform이 소유. `glossary.md` → OM Glossary 발행은 승격 시점에 수동(초기) — 자동화는 [roadmap](roadmap.md).
