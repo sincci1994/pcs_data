@@ -36,7 +36,7 @@ docker compose up -d --build     # warehouse Postgres + Airflow standalone (mock
 # http://localhost:8080  (로컬 실습 — 로그인 생략)
 ```
 
-DAG 3종이 보이면 성공: `extract__ees_portmaster2` → (Asset) → `dbt_pcs_transform`, 그리고 `sensor_api_demo`.
+DAG 4종이 보이면 성공: `extract__ees_portmaster2` → (Asset) → `dbt_pcs_transform`, 그리고 `sensor_api_demo`·`dbt_docs`.
 extract 를 트리거하면 mock 47행이 brz 로 적재되고, dbt DAG 가 자동 기동해 slv 뷰 → gld 테이블(설비/배관/협력사 기준정보) → 테스트까지 이어진다.
 
 **dbt UI**: `dbt_docs` DAG 를 트리거하면 Airflow UI 네비게이션의 **dbt Docs** 메뉴에서 모델 문서·컬럼·계보 그래프를 볼 수 있다 (모델 변경 후 다시 트리거하면 갱신).
@@ -57,7 +57,7 @@ docker compose down -v
 ## 구조
 
 ```
-dags/               extract 팩토리 · Cosmos dbt DAG · sensor 데모 (+ lib/ 공용 코드·소스 선언)
+dags/               extract 팩토리 · Cosmos dbt DAG · dbt docs 생성 · sensor 데모 (+ lib/ 공용 코드·소스 선언)
 dbt/                데이터 모델 정의 전부 — models(slv/gld/sbx) · seeds · tests
 spark/              실서버용 Spark 추출 job (로컬 미실행 스텁)
 init/               warehouse 초기화 (스키마·롤·mock 시드)
