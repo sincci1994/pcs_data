@@ -1,0 +1,14 @@
+# dbt 접속 프로필 — 크리덴셜은 전부 env_var (컨테이너 env). 하드코딩 금지.
+# Cosmos ProfileConfig 가 이 파일을 직접 참조한다 (dags/transform_dbt.py).
+pcs_warehouse:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('PCS_WH_HOST', 'localhost') }}"
+      port: "{{ env_var('PCS_WH_PORT', '5433') | int }}"
+      user: "{{ env_var('PCS_DBT_USER') }}"
+      password: "{{ env_var('PCS_DBT_PASSWORD') }}"
+      dbname: "{{ env_var('PCS_WH_DB', 'pcs_wh') }}"
+      schema: sbx
+      threads: 4

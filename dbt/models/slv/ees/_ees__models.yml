@@ -1,0 +1,23 @@
+# 컬럼 설명은 모델 .sql 헤더 주석에 — 이 파일은 테스트 정의만.
+version: 2
+
+models:
+  - name: stg_ees__portmaster2
+    columns:
+      - name: eqp_id
+        tests: [not_null]
+      - name: eqp_chamber_id
+        tests: [not_null]
+      - name: eqp_chamber_posn
+        tests: [not_null]
+      - name: eqp_posn
+        tests: [not_null]
+      - name: seqp_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["PUMP", "SCRUBBER"]
+      - name: seqp_maker
+        tests: [not_null]
+      - name: seqp_id
+        tests: [not_null]
