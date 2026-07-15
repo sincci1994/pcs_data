@@ -1,7 +1,7 @@
 # CLAUDE.md — PCS 데이터 파이프라인 (START HERE)
 
 PCS기술팀의 **업무 능력·데이터 활용능력 향상**을 위한 데이터 파이프라인 — Airflow + dbt + OpenMetadata.
-요구사항 원문과 반영 매핑: [design/00_REQUIREMENTS.md](design/00_REQUIREMENTS.md) · 궁극 구조 기획(조직·소스 지형·팀 경계): [design/11_TARGET_ARCHITECTURE.md](design/11_TARGET_ARCHITECTURE.md)
+요구사항 원문과 반영 매핑: [design/00_REQUIREMENTS.md](design/00_REQUIREMENTS.md) · 목표 구조 설계안(조직·소스 지형·팀 경계): [design/11_TARGET_ARCHITECTURE.md](design/11_TARGET_ARCHITECTURE.md)
 
 ## 왜 만드는가
 - 레거시 앱 VIEW_TABLE을 못 믿어 엔지니어마다 Excel로 재가공 → **개인 판단이 만든 불규칙한 그림자 데이터 프로덕트** 난립.

@@ -53,11 +53,12 @@ warehouse.slv (silver — 정제·표준화) → warehouse.gld (gold — 비즈�
 | ③ | 소스 접근 | **별도 시스템에서 주기 제공** | Extract 태스크가 채널 대응. 상세는 원격 환경 확인 후. I/F 선택지(시스템 I/F 지향 vs DataLake)와 소스 지형은 [11 §2](11_TARGET_ARCHITECTURE.md) |
 | ④ | 오케스트레이션 | **Manager/Model Dynamic DAG** | → [03_DAG_DESIGN.md](03_DAG_DESIGN.md) · [adr/0002](adr/0002-manager-model-dynamic-dag.md) |
 | ⑤ | 변환 엔진 | **dbt-postgres 단일** (PySpark 보류) | → [adr/0003](adr/0003-defer-pyspark-multi-engine.md) |
+| ⑦ | 캐던스 결정 지점 | **sources.yml `schedule` 단일 지점** — 소스 적재 주기(grain)와 분리해 배치 추출 주기로 결정, 하류는 Asset 연쇄로 전파 | dbt 모델은 주기를 갖지 않는다. grain≠cadence, 상세 → [03 캐던스](03_DAG_DESIGN.md) |
 
 ## 온톨로지 (요구 4 "비즈니스 정의로 흐름을 본다")
 
 - **정의**: `governance/glossary.md` — 지표·용어의 단일 원천. dbt `schema.yml` 컬럼 설명과 함께 OpenMetadata로 발행.
-- **관계 — 3층 원천** (2026-07-15 형식화): ① 용어↔용어 = glossary 항목의 **관계** 필드(`[[용어명]]` 문법, OM related terms로 발행) ② 테이블·컬럼 = `schema.yml` + relationships 테스트 ③ 자산 계보 = dbt `ref()` 그래프(manifest) → OM 리니지. 지식그래프(GraphRAG 등)가 필요해지면 이 3층을 합치는 것으로 구성한다 — 별도 온톨로지 도구(RDF/OWL) 도입 없음.
+- **관계 — 3층 원천**: ① 용어↔용어 = glossary 항목의 **관계** 필드(`[[용어명]]` 문법, OM related terms로 발행) ② 테이블·컬럼 = `schema.yml` + relationships 테스트 ③ 자산 계보 = dbt `ref()` 그래프(manifest) → OM 리니지. 지식그래프(GraphRAG 등)가 필요해지면 이 3층을 합치는 것으로 구성한다 — 별도 온톨로지 도구(RDF/OWL) 도입 없음.
 - **흐름 조회**: OpenMetadata UI에서 용어 → 연결 자산 → 리니지로 탐색.
 - **시멘틱 레이어 포지션**: 쿼리 타임 메트릭 계층(MetricFlow·Cube류)은 도입하지 않는다 — "정의 1곳/소비 N곳"은 glossary 정의 → gld 물질화가 **빌드 타임**에 달성하고, 소비자는 서빙 테이블을 직접 읽는다([08 §1.1](08_DATA_OPS.md)). BI 셀프서비스 질의 수요가 실체화될 때 재검토.
 - **운영**: OM ingestion(메타데이터 + dbt artifacts)은 일 1회 스케줄 파이프라인으로 platform이 소유. `glossary.md` → OM Glossary 발행은 승격 시점에 수동(초기) — 자동화는 [roadmap](roadmap.md).

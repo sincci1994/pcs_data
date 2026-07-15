@@ -4,7 +4,7 @@
 엔지니어 개인 Excel 가공으로 흩어진 데이터 프로덕트를 표준 계층(brz→slv→gld)과 비즈니스 정의(온톨로지)로 재정착시킨다.
 
 - 처음 쓰는 사람 → [GUIDE.md](GUIDE.md)
-- 요구사항 원문 → [design/00_REQUIREMENTS.md](design/00_REQUIREMENTS.md) · 비즈니스 컨텍스트와 목표 청사진 → [design/11_TARGET_ARCHITECTURE.md](design/11_TARGET_ARCHITECTURE.md)
+- 요구사항 원문 → [design/00_REQUIREMENTS.md](design/00_REQUIREMENTS.md) · 목표 구조 설계안 → [design/11_TARGET_ARCHITECTURE.md](design/11_TARGET_ARCHITECTURE.md)
 
 ## 1. 풀려는 문제
 
@@ -52,6 +52,8 @@ warehouse Postgres  ← 소모성 변환 연산 공간 (rolling window만 보유
 
 Manager는 cron이 아니라 extract DAG가 brz 적재 완료 시 발행하는 **Asset 이벤트**(Airflow 3 data-aware scheduling)로 깬다. 소스마다 적재 주기가 달라도 의존성 연쇄가 자동으로 이어진다.
 
+주기의 유일한 결정 지점은 `sources.yml`의 `schedule`(extract cron)이다 — dbt 모델은 주기를 갖지 않고, 소스 적재 grain(예: 5분 집계)과 파이프라인 캐던스(예: 3시간 배치 추출)는 분리해 결정한다. → [design/03 캐던스](design/03_DAG_DESIGN.md)
+
 ### 런타임 결정론 — LLM·컴파일 금지
 
 DAG 파싱·실행 경로에는 커밋된 `manifest.json`/`sources.yml`만 존재한다. dbt compile은 저작 단계(CI 머지 게이트)에서, AI Agent는 오프라인 저작에서만. 운영 중 그래프가 변하는 경로가 없다.
@@ -82,6 +84,7 @@ DAG 파싱·실행 경로에는 커밋된 `manifest.json`/`sources.yml`만 존�
 | SLV까지 서빙 Oracle에 publish | 전송·저장 비용 증가 | 소비자가 warehouse를 몰라도 되는 경계 유지가 우선, 비용 손잡이 3개 확보 — [design/08 §3](design/08_DATA_OPS.md) |
 | 인터뷰 기반 AS-IS 발굴 (자동화 안 함) | 사람 시간 소요 | 변환 의도는 쿼리에서 복원 불가 — 한시적 프로세스로 한정 |
 | 소비자용 결측 가시화 미구현 | "어떤 정보가 안 오는지"는 현재 운영자 알림 중심 | 인지된 갭 — [design/11 §6](design/11_TARGET_ARCHITECTURE.md) · [roadmap](design/roadmap.md) |
+| Manager의 Asset 리스트 구독 = AND 의미론 | 캐던스 다른 두 번째 소스 추가 시 느린 소스에 묶이고, 한 소스 실패가 전체 기동 차단 | 소스 1개인 현재는 미발현. 전환 조건·방식(AssetAny+영향 하위그래프 트리거) 명문화 — [design/03 캐던스](design/03_DAG_DESIGN.md) |
 
 ## 5. 저장소 구조 (역할 기반)
 
@@ -100,8 +103,8 @@ design/       요구사항 · 아키텍처 · ADR · 로드맵
 
 | 문서 | 내용 |
 |---|---|
-| [design/00_REQUIREMENTS.md](design/00_REQUIREMENTS.md) | 요구사항 원문(2026-07-09 + 07-15 보완) + 반영 매핑 |
-| [design/11_TARGET_ARCHITECTURE.md](design/11_TARGET_ARCHITECTURE.md) | 궁극 구조 기획 — 조직·소스 지형·팀 경계·저장소 제약 |
+| [design/00_REQUIREMENTS.md](design/00_REQUIREMENTS.md) | 요구사항 원문 + 반영 매핑 |
+| [design/11_TARGET_ARCHITECTURE.md](design/11_TARGET_ARCHITECTURE.md) | 목표 구조 설계안 — 조직·소스 지형·팀 경계·저장소 제약 |
 | [design/01_OVERVIEW.md](design/01_OVERVIEW.md) | 문제·목적·범위 |
 | [design/02_ARCHITECTURE.md](design/02_ARCHITECTURE.md) | 전체 아키텍처·계층·역할 분담 |
 | [design/03_DAG_DESIGN.md](design/03_DAG_DESIGN.md) | Manager/Model 동적 DAG 설계 |

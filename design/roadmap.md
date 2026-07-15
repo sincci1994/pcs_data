@@ -15,3 +15,5 @@
 | 소비자용 결측 가시화 (내 마트의 상류 상태 뷰) | [11 §6](11_TARGET_ARCHITECTURE.md) | OM 사용 정착 후, 소비자가 OM 리니지+freshness로 부족하다고 실증될 때 |
 | DataLake 카탈로그 I/F 재평가 | [11 §2](11_TARGET_ARCHITECTURE.md) | Lake 안정화가 실증될 때 (현행은 시스템 I/F 지향) |
 | GEMS·EAM 인입 시나리오 선정 | [11 §2](11_TARGET_ARCHITECTURE.md) | SMDM enrichment 정식화 이후 |
+| watermark 추출 모드 구현 (증분+lookback+ctl.watermark) | [03 캐던스](03_DAG_DESIGN.md) · [08 §4](08_DATA_OPS.md) | 첫 누적형 소스(N2 등) 실명세 확보 시 |
+| Manager 기동 AssetAny 전환 + 영향 하위그래프 선택 트리거 | [03 캐던스](03_DAG_DESIGN.md) | sources.yml 두 번째 소스(상이 캐던스) 추가 시 — AND 함정 발현 전 선행 |
