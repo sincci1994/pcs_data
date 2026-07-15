@@ -5,9 +5,14 @@
 - 테스트: TestBehavior.AFTER_EACH(기본) — 모델 run 직후 소속 테스트, 실패 시 하류 차단.
 - 계보: dbt docs generate 산출물이 그대로 리니지 문서 (→ README).
 """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))   # 파서 프로세스 재사용 시 dags 폴더 누락 방어
+
 from airflow.sdk import Asset
 from cosmos import DbtDag, ExecutionConfig, ProfileConfig, ProjectConfig, RenderConfig
-from cosmos.constants import LoadMode
+from cosmos.constants import InvocationMode, LoadMode
 
 from lib import notifier
 from lib.config import asset_uri, load_sources
@@ -28,9 +33,15 @@ dbt_pcs_transform = DbtDag(
         target_name="dev",
         profiles_yml_filepath=f"{DBT_ROOT}/profiles.yml",   # env_var 기반 — .env 만 채우면 됨
     ),
-    execution_config=ExecutionConfig(dbt_executable_path=DBT_BIN),
+    execution_config=ExecutionConfig(
+        dbt_executable_path=DBT_BIN,
+        invocation_mode=InvocationMode.SUBPROCESS,   # dbt 는 전용 venv — dbtRunner import 불가
+    ),
     render_config=RenderConfig(
         load_method=LoadMode.DBT_LS,        # 파싱 느려지면 DBT_MANIFEST 로 후퇴 (manifest 커밋 필요)
         dbt_executable_path=DBT_BIN,
+        invocation_mode=InvocationMode.SUBPROCESS,
+        # 여러 모델을 참조하는 singular test 는 분리 노드로 — 모든 부모 모델 뒤에 실행
+        should_detach_multiple_parents_tests=True,
     ),
 )

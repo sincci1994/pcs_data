@@ -10,6 +10,11 @@ SparkSubmitOperator(application="spark/jobs/extract_portmaster2_full.py")가 대
 backfill: snapshot 모드는 과거 날짜 재실행 = 현재 스냅샷 재적재와 동일 (delete+insert 멱등) —
 catchup 없음, 필요 시 최신 run 만 clear.
 """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))   # 파서 프로세스 재사용 시 dags 폴더 누락 방어
+
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import DAG, Asset
 

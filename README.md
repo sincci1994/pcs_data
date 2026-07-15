@@ -40,8 +40,9 @@ DAG 3종이 보이면 성공: `extract__ees_portmaster2` → (Asset) → `dbt_pc
 extract 를 트리거하면 mock 47행이 brz 로 적재되고, dbt DAG 가 자동 기동해 slv 뷰 → gld 테이블(설비/배관/협력사 기준정보) → 테스트까지 이어진다.
 
 ```bash
-# 계보 문서 (모델 간 의존 그래프)
-docker compose exec airflow /opt/airflow/dbt_venv/bin/dbt docs generate --project-dir /opt/airflow/dbt --profiles-dir /opt/airflow/dbt
+# 계보 문서 (모델 간 의존 그래프) — 산출물은 /tmp/dbt_docs/index.html
+# (dbt 프로젝트 마운트는 컨테이너에서 root 소유라 쓰기 경로를 env 로 분리한다)
+docker compose exec airflow bash -c "DBT_TARGET_PATH=/tmp/dbt_docs DBT_LOG_PATH=/tmp/dbt_logs /opt/airflow/dbt_venv/bin/dbt docs generate --project-dir /opt/airflow/dbt --profiles-dir /opt/airflow/dbt"
 # 전체 리셋
 docker compose down -v
 ```

@@ -5,6 +5,11 @@
 "신규 데이터 존재" 판정으로 교체하고 process 자리에 적재 태스크를 잇는다.
 연결은 compose env 한 줄: AIRFLOW_CONN_DEMO_API=http://localhost:8080
 """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))   # 파서 프로세스 재사용 시 dags 폴더 누락 방어
+
 from airflow.providers.http.sensors.http import HttpSensor
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import DAG
