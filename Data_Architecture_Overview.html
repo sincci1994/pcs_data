@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데이터 아키텍처 오버뷰 — DW 레이어 &amp; 메트릭 스토어</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --border:#2a3140;
+    --ink:#e6edf3; --muted:#9aa7b8; --dim:#6b7684;
+    --accent:#6ea8fe; --accent2:#7ee787;
+    --ods:#6ea8fe; --src:#7ee787; --dim2:#d2a8ff; --fact:#f0a868; --ms:#f778ba;
+    --code-bg:#0b0f16;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    /* diagram pastel (drawio 원본 톤) */
+    --d-yellow-b:#fff2cc; --d-yellow-l:#d6b656;
+    --d-orange-b:#ffe6cc; --d-orange-l:#d79b00;
+    --d-red-b:#f8cecc; --d-red-l:#b85450;
+    --d-blue-b:#dae8fc; --d-blue-l:#6c8ebf;
+    --d-purple-b:#e1d5e7; --d-purple-l:#9673a6;
+    --d-gray-b:#f5f5f5; --d-gray-l:#999;
+    --d-ink:#1a2230;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.7;font-size:15.5px;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+
+  header.hero{padding:60px 24px 36px;text-align:center;
+    background:radial-gradient(1200px 400px at 50% -80px,rgba(126,231,135,.16),transparent 70%);
+    border-bottom:1px solid var(--border)}
+  .hero .kicker{color:var(--accent2);font-weight:700;letter-spacing:.14em;font-size:12.5px;text-transform:uppercase}
+  .hero h1{font-size:38px;margin:12px 0 10px;letter-spacing:-.02em}
+  .hero p{max-width:720px;margin:0 auto;color:var(--muted);font-size:16.5px}
+  .hero .oneliner{margin-top:20px;display:inline-block;padding:10px 18px;border:1px solid var(--border);
+    border-radius:999px;background:var(--panel);font-family:var(--mono);font-size:13px;color:var(--ink)}
+  .hero .oneliner b{color:var(--accent2)}
+
+  nav.toc{position:sticky;top:0;z-index:20;background:rgba(13,17,23,.86);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);padding:10px 0}
+  nav.toc ul{max-width:1080px;margin:0 auto;padding:0 24px;list-style:none;display:flex;gap:6px;
+    flex-wrap:wrap;justify-content:center}
+  nav.toc a{font-size:13px;color:var(--muted);padding:5px 11px;border-radius:7px;white-space:nowrap}
+  nav.toc a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+
+  section{padding-top:56px}
+  h2{font-size:26px;letter-spacing:-.01em;margin:0 0 6px;display:flex;align-items:center;gap:12px}
+  h2 .num{font-family:var(--mono);font-size:15px;color:var(--accent2);border:1px solid var(--border);
+    border-radius:8px;padding:2px 9px;background:var(--panel)}
+  h3{font-size:18.5px;margin:32px 0 10px}
+  .lead{color:var(--muted);font-size:16px;margin:4px 0 20px;max-width:820px}
+  p{margin:12px 0}
+  .muted{color:var(--muted)}
+  code.inl{font-family:var(--mono);font-size:.88em;background:var(--panel2);color:#ffd9a0;
+    padding:1.5px 6px;border-radius:5px;border:1px solid var(--border)}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px 22px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  .callout{border-left:3px solid var(--accent2);background:var(--panel2);border-radius:0 10px 10px 0;
+    padding:14px 18px;margin:20px 0;color:var(--muted)}
+  .callout b{color:var(--ink)}
+  .callout.warn{border-color:var(--fact)}
+
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:11px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:12.8px;line-height:1.6;color:#c9d5e3}
+  pre .c{color:#6b7684}pre .k{color:#ff7b72}pre .s{color:#a5d6ff}pre .f{color:#d2a8ff}pre .n{color:#79c0ff}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;background:var(--panel2)}
+  td code, th code{font-family:var(--mono);font-size:12.5px;color:#ffd9a0}
+  tbody tr:hover{background:var(--panel2)}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;margin:16px 0}
+  .tbl-wrap table{margin:0}
+
+  .chip{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--border);
+    background:var(--panel);border-radius:7px;padding:4px 10px;display:inline-block;margin:3px 3px 0 0}
+
+  /* ===== 다이어그램 보드 ===== */
+  .board{background:#fbfcfe;border:1px solid var(--border);border-radius:16px;padding:26px 22px;margin:22px 0;
+    overflow-x:auto}
+  .board-inner{display:flex;gap:0;align-items:stretch;min-width:940px}
+  .col{display:flex;flex-direction:column}
+  .grp{border-radius:14px;padding:16px 16px 18px;height:100%}
+  .grp-title{color:var(--d-ink);font-weight:700;font-size:14.5px;text-align:center;margin-bottom:14px}
+  .dbox{border-radius:8px;padding:12px 14px;color:var(--d-ink);border:1.5px solid}
+  .dbox .t{font-weight:700;font-size:14px}
+  .dbox .d{font-size:11.5px;color:#3a4658;margin-top:5px;line-height:1.5}
+  .dbox ul{margin:8px 0 0;padding-left:16px;font-size:11.5px;color:#3a4658}
+  .dbox ul li{margin:3px 0}
+
+  .ms{background:var(--d-yellow-b);border:2px solid var(--d-yellow-l)}
+  .ms .semantic{background:var(--d-orange-b);border-color:var(--d-orange-l)}
+  .ms .engine{background:var(--d-red-b);border-color:var(--d-red-l);margin-top:auto}
+  .dw{background:var(--d-gray-b);border:2px dashed var(--d-gray-l)}
+  .sub{border:1.5px dashed var(--d-blue-l);border-radius:12px;padding:12px;margin-top:12px}
+  .sub .sub-t{font-size:11.5px;color:#4a5568;text-align:center;margin-bottom:9px;font-weight:600}
+  .b-blue{background:var(--d-blue-b);border-color:var(--d-blue-l)}
+  .down{background:var(--d-purple-b);border:2px solid var(--d-purple-l)}
+  .down .dbox{background:#fff;border-color:var(--d-purple-l);margin-bottom:12px;text-align:center}
+  .down .dbox:last-child{margin-bottom:0}
+
+  .flowdown{text-align:center;color:var(--d-gray-l);font-size:18px;line-height:1;margin:8px 0}
+  .row2{display:flex;gap:10px}
+  .row2 .dbox{flex:1}
+
+  /* gutter connectors */
+  .gutter{width:96px;flex:0 0 96px;position:relative;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:26px;padding:20px 0}
+  .conn{font-size:11px;font-weight:700;color:var(--d-ink);background:#fff;border:1px solid #cdd5e0;
+    border-radius:6px;padding:3px 8px;white-space:nowrap}
+  .conn.ref{border-style:dashed;color:var(--d-orange-l);border-color:var(--d-orange-l)}
+  .conn.load{color:var(--d-red-l);border-color:var(--d-red-l)}
+  .gutter .arrow{color:#8a94a3;font-size:13px}
+  .gutter.right{width:70px;flex:0 0 70px}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:18px;font-size:12px;color:var(--dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend .ln{width:26px;height:0;border-top:2px solid #8a94a3}
+  .legend .ln.dash{border-top:2px dashed var(--d-orange-l)}
+  .legend .ln.sol{border-top:2px solid var(--d-red-l)}
+
+  .layer-tag{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;letter-spacing:.03em}
+  .lt-ods{color:var(--ods);background:rgba(110,168,254,.13)}
+  .lt-src{color:var(--src);background:rgba(126,231,135,.13)}
+  .lt-fact{color:var(--fact);background:rgba(240,168,104,.13)}
+
+  footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--border);color:var(--dim);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="kicker">flex · data platform</div>
+  <h1>데이터 아키텍처 오버뷰</h1>
+  <p><b>물리적 데이터 공간(DW 레이어)</b>과 그 위의 <b>논리적 지표 관리 시스템(메트릭 스토어)</b>이
+     어떻게 나뉘고, 참조하고, 적재하며 다운스트림으로 흐르는지 한눈에 정리합니다.</p>
+  <div class="oneliner">ODS → <b>Source(src·dim)</b> → 소비(fact·metric_store) → <b>Downstream</b></div>
+</header>
+
+<nav class="toc">
+  <ul>
+    <li><a href="#map">전체 지도</a></li>
+    <li><a href="#twoaxis">두 개의 축</a></li>
+    <li><a href="#layers">DW 3레이어</a></li>
+    <li><a href="#srcdim">src vs dim</a></li>
+    <li><a href="#patterns">생성 패턴 5</a></li>
+    <li><a href="#naming">네이밍 표준</a></li>
+    <li><a href="#metricstore">메트릭 스토어의 위치</a></li>
+    <li><a href="#flow">종합 흐름</a></li>
+  </ul>
+</nav>
+
+<div class="wrap">
+
+  <!-- MAP -->
+  <section id="map">
+    <h2><span class="num">01</span>전체 지도</h2>
+    <p class="lead">왼쪽의 <b>메트릭 스토어</b>는 코드를 실행하는 시스템, 가운데 <b>데이터 웨어하우스</b>는
+       데이터가 실제로 쌓이는 물리 공간, 오른쪽은 <b>소비처</b>입니다.
+       메트릭 스토어는 DW의 마트를 <b>참조</b>해 계산하고, 결과를 <b>metric_store 물리 테이블로 적재</b>합니다.</p>
+
+    <div class="board">
+      <div class="board-inner">
+
+        <!-- Col 1: Metric Store -->
+        <div class="col" style="flex:0 0 250px">
+          <div class="grp ms" style="display:flex;flex-direction:column">
+            <div class="grp-title">메트릭스토어 (지표 관리 시스템)</div>
+            <div class="dbox semantic">
+              <div class="t">시맨틱 레이어 (논리 선언부 / YAML)</div>
+              <ul>
+                <li>Source 선언 — 어디서 읽을까?</li>
+                <li>Dimension 선언 — 어떻게 자를까?</li>
+                <li>Metric 정의 — 어떻게 계산할까?</li>
+              </ul>
+            </div>
+            <div class="dbox engine">
+              <div class="t">프레임워크 / 엔진 (실행부)</div>
+              <div class="d">선언된 로직을 바탕으로 쿼리 생성 및 실행</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gutter 1: 참조 / 적재 -->
+        <div class="gutter">
+          <div class="conn ref">⇠ 참조</div>
+          <div class="conn load">적재 →</div>
+        </div>
+
+        <!-- Col 2: DW -->
+        <div class="col" style="flex:1;min-width:360px">
+          <div class="grp dw">
+            <div class="grp-title">데이터 웨어하우스 (물리적 데이터 공간)</div>
+
+            <div class="dbox b-blue" style="text-align:center">
+              <div class="t">ODS 레이어</div>
+              <div class="d">원천 시스템 데이터 1:1 복제</div>
+            </div>
+            <div class="flowdown">↓</div>
+
+            <div class="sub">
+              <div class="sub-t">소스 레이어</div>
+              <div class="row2">
+                <div class="dbox b-blue">
+                  <div class="t">src_*</div>
+                  <div class="d">소스 마트<br>트랜잭션 · 이벤트</div>
+                </div>
+                <div class="dbox b-blue">
+                  <div class="t">dim_*</div>
+                  <div class="d">디멘션 마트<br>엔티티 마스터</div>
+                </div>
+              </div>
+            </div>
+            <div class="flowdown">↓</div>
+
+            <div class="sub">
+              <div class="sub-t">소비 레이어 (집계 / 최종 데이터)</div>
+              <div class="dbox b-blue" style="margin-bottom:12px">
+                <div class="t">fact_*</div>
+                <div class="d">메인 집계 마트</div>
+              </div>
+              <div class="dbox b-blue">
+                <div class="t">metric_store_*</div>
+                <div class="d">프레임워크가 적재한 지표 물리 테이블</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gutter 2 -->
+        <div class="gutter right">
+          <div class="conn">소비 →</div>
+        </div>
+
+        <!-- Col 3: Downstream -->
+        <div class="col" style="flex:0 0 190px">
+          <div class="grp down" style="display:flex;flex-direction:column;justify-content:center">
+            <div class="grp-title">다운스트림 소비</div>
+            <div class="dbox"><div class="t">BI 대시보드 (Metabase)</div></div>
+            <div class="dbox"><div class="t">자동 리포트 / Slack</div></div>
+            <div class="dbox"><div class="t">애드혹 분석 (SQL)</div></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="legend">
+        <span><span class="ln dash"></span> 참조 (읽기) — 시맨틱 레이어가 src·dim·fact 를 소스로 선언</span>
+        <span><span class="ln sol"></span> 적재 (쓰기) — 엔진이 metric_store 테이블 생성</span>
+        <span><span class="ln"></span> 레이어 간 데이터 흐름 / 소비</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <b>핵심 한 줄.</b> DW는 "데이터를 표준 레이어로 쌓는 곳", 메트릭 스토어는 "그 위에서 지표 정의를 선언하면 SQL을
+      자동 생성·적재해 주는 시스템"입니다. 둘은 <b>참조(읽기)</b>와 <b>적재(쓰기)</b>로 맞물립니다.
+    </div>
+  </section>
+
+  <!-- TWO AXIS -->
+  <section id="twoaxis">
+    <h2><span class="num">02</span>두 개의 축 — 물리 vs 논리</h2>
+    <p class="lead">아키텍처를 이해하는 첫 갈림길: "이건 데이터가 쌓이는 곳인가, 지표를 선언하는 곳인가".</p>
+    <div class="grid2">
+      <div class="card">
+        <span class="layer-tag lt-ods" style="background:rgba(108,142,191,.18);color:#9fc0ff">물리적 DW</span>
+        <h3 style="margin:12px 0 8px">데이터가 실제로 쌓이는 공간</h3>
+        <p class="muted" style="font-size:14px;margin:0">
+          ODS → Source(src·dim) → 소비(fact) 로 이어지는 <b>레이어드 아키텍처</b>.
+          각 테이블은 SQL DML로 만들어져 스키마에 물리적으로 존재합니다.
+          표준(네이밍·타입·KST·삭제 플래그)은 <code class="inl">데이터마트표준화가이드.md</code> 가 SSOT.</p>
+      </div>
+      <div class="card">
+        <span class="layer-tag" style="background:rgba(247,120,186,.16);color:#f778ba">논리적 지표 관리</span>
+        <h3 style="margin:12px 0 8px">지표를 선언하면 자동 계산되는 시스템</h3>
+        <p class="muted" style="font-size:14px;margin:0">
+          메트릭 스토어. 사람은 YAML(시맨틱 레이어)만 쓰고, 엔진이 그 위 DW 마트를 참조해 SQL을 생성·실행,
+          <code class="inl">metric_store_hist</code> 로 적재합니다. 상세는
+          <a href="../mart/metric_store/docs/metric_store_overview.html">메트릭 스토어 오버뷰</a> 참고.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAYERS -->
+  <section id="layers">
+    <h2><span class="num">03</span>DW 3레이어</h2>
+    <p class="lead">원천에서 소비까지, 데이터는 세 레이어를 거치며 점점 "질문에 답할 수 있는 형태"가 됩니다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>레이어</th><th>목적</th><th>스키마 예시</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="layer-tag lt-ods">ODS</span></td>
+            <td>원천 시스템(RDB·API)을 <b>변환 없이 1:1 복제</b>. 스키마·컬럼명·타입이 원천과 그대로 대응. 원천의 기술적 부채(모호한 컬럼명·비정규화)가 그대로 존재.</td>
+            <td><code>core_ods</code> <code>timetracking_ods</code> <code>fins_ods</code> <code>goal_ods</code></td>
+          </tr>
+          <tr>
+            <td><span class="layer-tag lt-src">Source</span></td>
+            <td>ODS의 부채를 해소하고 전사 표준으로 정제·통합한 <b>준비된 데이터(Prepared Data)</b>. 복잡한 집계는 최소화하고 기초 클렌징 + 비즈니스 단위 통합에 집중. <code>src_*</code>(사건·행위) / <code>dim_*</code>(엔티티 마스터).</td>
+            <td><code>core_mart.dim_*</code> <code>fins_mart.src_*</code> <code>timetracking_mart.dim_*</code></td>
+          </tr>
+          <tr>
+            <td><span class="layer-tag lt-fact">소비</span></td>
+            <td>비즈니스 질문에 직접 답하는 <b>집계·지표</b> 테이블. BI·리포트·ML Feature 등 목적별 구성. <code>fact_*</code>(집계) + 메트릭 스토어가 적재하는 <code>metric_store_*</code>.</td>
+            <td><code>core_mart.fact_*</code> <code>bi_mart.*</code> <code>finance_mart.*</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      소스 레이어 패턴 요약: <code class="inl">ODS → dim</code> · <code class="inl">ODS → src</code> ·
+      <code class="inl">src + src → src</code>. 이 레이어에서 "한 행이 엔티티냐 사건이냐"를 먼저 정하는 게 핵심입니다.
+    </div>
+  </section>
+
+  <!-- SRC vs DIM -->
+  <section id="srcdim">
+    <h2><span class="num">04</span>src vs dim 판별 기준</h2>
+    <p class="lead">가로형/세로형이 아니라 <b>"한 행이 무엇을 의미하는가"</b>로 판별합니다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>질문</th><th>DIM (디멘션)</th><th>SRC (소스)</th></tr></thead>
+        <tbody>
+          <tr><td>한 행이 무엇인가</td><td>지속하는 <b>엔티티 1개</b> (회사·사람·카드·목표)</td><td>발생한 <b>사건 1건</b> (제출·전환·거래·업데이트)</td></tr>
+          <tr><td>같은 엔티티에서 반복되나</td><td>아니오 (1행 = 1엔티티)</td><td>예 (1엔티티 = 다행)</td></tr>
+          <tr><td>측정치(SUM/AVG 할 수치)를 갖나</td><td>없음 (기술 속성 위주)</td><td>있음 (<code>_amount</code>, <code>_minutes</code> 등)</td></tr>
+          <tr><td>조인 방향</td><td>남이 나를 FK로 참조</td><td>내가 dim을 FK로 참조</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <b>빠른 판별:</b> 측정치를 들고 dim들을 FK로 참조하면 <b>SRC</b>, 남들이 나를 조인 기준으로 쓰면 <b>DIM</b>.
+    </div>
+
+    <h3>프로세스·이벤트가 섞였을 때 (dim 흡수 vs src 분리)</h3>
+    <div class="grid2">
+      <div class="card">
+        <h4 style="margin:0 0 8px;font-size:15px">dim 에 흡수 <span class="muted" style="font-size:12px">(3개 모두 충족)</span></h4>
+        <ul class="muted" style="font-size:13.5px;margin:0;padding-left:18px">
+          <li>엔티티당 ~1회 발생 (accumulating snapshot이 1:1)</li>
+          <li>이벤트별 이력·재진입·velocity 분석 불필요</li>
+          <li>측정치 없음 — 상태/시점 스냅샷뿐</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4 style="margin:0 0 8px;font-size:15px">src 로 분리 <span class="muted" style="font-size:12px">(하나라도 깨지면)</span></h4>
+        <p class="muted" style="font-size:13.5px;margin:0">
+          분리 트리거는 cardinality가 아니라 <b>"sub-entity 이벤트 이력(전환·재진입·velocity) 수요가 있느냐"</b>.
+          프로세스가 1개여도 단계 전환이 여럿이면 transition grain의 src가 필요할 수 있음.</p>
+      </div>
+    </div>
+    <div class="callout warn">
+      <b>함정.</b> 원천이 <code class="inl">last_*</code> 최신 스냅샷 컬럼만 갖고 실제 전환 이벤트 로그가 없으면,
+      그걸 unpivot 해 src로 만들어도 정보량은 그대로이고 "이벤트 로그인 척하는 비단조 스냅샷"이 되어 오용을 부릅니다.
+      진짜 transition src는 SCD 스냅샷(<code class="inl">_hist</code>)을 diff 하는 등 <b>이벤트 원천이 있을 때만</b> 만듭니다.
+    </div>
+  </section>
+
+  <!-- PATTERNS -->
+  <section id="patterns">
+    <h2><span class="num">05</span>소스 레이어 생성 패턴 5</h2>
+    <p class="lead">원천 형태와 결과물(엔티티/사건)의 조합으로 다섯 패턴이 나옵니다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>패턴</th><th>핵심 가공</th><th>사례</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>ODS → DIM</code><br><span class="muted" style="font-size:12px">단일 원천 디멘션</span></td>
+              <td>리네이밍 · 타입 캐스팅 / ENUM 인코딩 · 불리언 플래그 · KST 변환</td>
+              <td><code>dim_customer_work_form</code>, <code>dim_spending_category</code>, <code>dim_user_education</code></td></tr>
+          <tr><td>2</td><td><code>ODS + ODS → DIM</code><br><span class="muted" style="font-size:12px">보조 속성 결합</span></td>
+              <td>CTE 사전 집계(COUNT·COLLECT_SET) · LEFT JOIN 보강 · Self JOIN 계층 판별</td>
+              <td><code>dim_spending_card</code>, <code>dim_objective</code></td></tr>
+          <tr><td>3</td><td><code>ODS → SRC</code><br><span class="muted" style="font-size:12px">단일 이벤트 표준화</span></td>
+              <td>JSON 파싱(GET_JSON_OBJECT) · before/after 변경 감지 플래그 · 파생 계산</td>
+              <td><code>src_objective_progress_record</code></td></tr>
+          <tr><td>4</td><td><code>ODS + ODS → SRC</code><br><span class="muted" style="font-size:12px">다중 통합 이벤트</span></td>
+              <td>다중 LEFT JOIN · COALESCE 체인 병합 · 소스 레이어 내 src/dim 참조(DAG 의존) · 버전 통합(v1/v3)</td>
+              <td><code>src_spending</code>, <code>src_user_work</code></td></tr>
+          <tr><td>5</td><td><code>DIM + DIM → DIM</code><br><span class="muted" style="font-size:12px">조합 디멘션(관계 스냅샷)</span></td>
+              <td>유효기간 기반 시점 조인 · <code>${start_date}</code> 일별 스냅샷 · ARRAY 계층 병합(SCD Type 2)</td>
+              <td><code>dim_department_user_position_hist</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><span class="c"># 소비 레이어 참조 (패턴 4) — 소스 레이어 내 다른 테이블을 CTE로 참조 (DAG 의존성 필요)</span>
+<span class="k">WITH</span> evidence <span class="k">AS</span> (
+  <span class="k">SELECT</span> spending_id, category_name
+  <span class="k">FROM</span> fins_mart.src_spending_evidence
+  <span class="k">WHERE</span> evidence_status <span class="k">NOT IN</span> (<span class="s">'CANCELED'</span>)
+)
+<span class="k">SELECT</span> s.id <span class="k">AS</span> spending_id, s.customer_id, s.amount <span class="k">AS</span> spending_amount,
+  <span class="f">COALESCE</span>(cd.merchant_name, crd.merchant_name, tid.supplier_merchant_name, ed.merchant_name) <span class="k">AS</span> merchant_name,
+  evidence.category_name  <span class="c">-- 소스 레이어 참조 컬럼</span>
+<span class="k">FROM</span> fins_ods.spending <span class="k">AS</span> s
+<span class="k">LEFT JOIN</span> fins_ods.spending_card_detail <span class="k">AS</span> cd <span class="k">ON</span> s.id = cd.spending_id
+<span class="k">LEFT JOIN</span> evidence <span class="k">ON</span> s.id = evidence.spending_id</pre>
+  </section>
+
+  <!-- NAMING -->
+  <section id="naming">
+    <h2><span class="num">06</span>컬럼 네이밍 &amp; 데이터 표준</h2>
+    <p class="lead">컬럼명은 <b>도메인 용어 정의 문서</b>가 SSOT. 아래는 마트에서 특히 자주 쓰이는 표준입니다.</p>
+
+    <h3>PK / FK 네이밍</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>패턴</th><th>예시</th></tr></thead>
+        <tbody>
+          <tr><td>PK</td><td><code>{엔티티_단수}_id</code></td><td><code>spending_id</code>, <code>objective_id</code>, <code>card_id</code></td></tr>
+          <tr><td>FK</td><td>참조 대상 PK명 그대로</td><td><code>customer_id</code>, <code>user_id</code>, <code>department_id</code></td></tr>
+          <tr><td>Self FK</td><td><code>{관계설명}_{엔티티}_id</code></td><td><code>parent_objective_id</code>, <code>parent_department_id</code></td></tr>
+          <tr><td>SK (대리키)</td><td><code>{엔티티}_sk</code> (MD5 해시)</td><td><code>department_sk = MD5(CONCAT_WS('||', ...))</code></td></tr>
+          <tr><td>배열 FK</td><td><code>{엔티티}_id_list</code> / <code>{엔티티}_list</code></td><td><code>participant_user_list</code>, <code>all_parent_department_list</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>컬럼 접미사 표준</h3>
+    <div>
+      <span class="chip">_type — ENUM 분류값</span>
+      <span class="chip">_status — 상태값</span>
+      <span class="chip">_amount — 금액/수량</span>
+      <span class="chip">_count — 집계 수</span>
+      <span class="chip">_percent / _rate — 비율</span>
+      <span class="chip">_minutes — 시간(분)</span>
+      <span class="chip">_depth / _level — 계층 깊이</span>
+      <span class="chip">_date — DATE</span>
+      <span class="chip">_at — TIMESTAMP</span>
+      <span class="chip">_list — ARRAY</span>
+      <span class="chip">_json_list / _json — JSON 원본</span>
+      <span class="chip">_encrypted — 암호화 컬럼</span>
+    </div>
+
+    <h3>시스템 메타 컬럼 &amp; KST 규약</h3>
+    <div class="grid2">
+      <div class="tbl-wrap" style="margin:0">
+        <table>
+          <thead><tr><th>컬럼</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td><code>db_created_at</code></td><td>원천 DB 생성 시각 (ODS 원본)</td></tr>
+            <tr><td><code>db_updated_at</code></td><td>원천 DB 수정 시각 (ODS 원본)</td></tr>
+            <tr><td><code>created_at</code></td><td>KST 변환 생성 시각</td></tr>
+            <tr><td><code>updated_at</code></td><td>KST 변환 수정 시각 (COALESCE)</td></tr>
+            <tr><td><code>deleted_at</code></td><td>KST 변환 삭제 시각</td></tr>
+            <tr><td><code>dw_updated_at</code></td><td>DW 적재 시각 (KST)</td></tr>
+            <tr><td><code>part_date</code></td><td>파티션 키 (일별 스냅샷 테이블)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h4 style="margin:0 0 8px;font-size:15px">KST 변환 규약</h4>
+        <pre style="margin:0"><span class="c">-- 원천 UTC → KST</span>
+<span class="f">FROM_UTC_TIMESTAMP</span>(created_at, <span class="s">'Asia/Seoul'</span>)
+<span class="f">FROM_UTC_TIMESTAMP</span>(<span class="f">COALESCE</span>(updated_at, created_at), <span class="s">'Asia/Seoul'</span>)
+
+<span class="c">-- DW 적재 시각 (KST = UTC+9)</span>
+<span class="f">CURRENT_TIMESTAMP</span> + <span class="k">INTERVAL</span> <span class="s">'9'</span> <span class="k">HOUR</span>
+
+<span class="c">-- 소프트 삭제 플래그</span>
+<span class="k">IF</span>(deleted_at <span class="k">IS NOT NULL</span>, <span class="n">TRUE</span>, <span class="n">FALSE</span>) <span class="k">AS</span> is_deleted</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- METRIC STORE PLACEMENT -->
+  <section id="metricstore">
+    <h2><span class="num">07</span>메트릭 스토어의 위치 — 참조하고, 되적재한다</h2>
+    <p class="lead">메트릭 스토어는 DW 옆에 붙는 <b>논리 레이어 + 실행 엔진</b>. DW 마트를 소스로 읽어(참조),
+       지표를 계산해 DW 소비 레이어에 물리 테이블로 되적재(적재)합니다.</p>
+    <div class="grid2">
+      <div class="card">
+        <span class="layer-tag" style="background:rgba(215,155,0,.16);color:#e0a83a">⇠ 참조 (읽기)</span>
+        <h4 style="margin:12px 0 8px;font-size:16px">시맨틱 레이어가 마트를 소스로 선언</h4>
+        <p class="muted" style="font-size:13.5px;margin:0">
+          YAML <code class="inl">res/sources/</code> 에 어떤 <code class="inl">src_*</code>·<code class="inl">dim_*</code>·<code class="inl">fact_*</code> 를
+          읽을지 선언합니다. 즉 <b>DW 소스/소비 레이어가 메트릭 스토어의 입력</b>입니다.
+          그래서 마트의 그레인·네이밍 표준이 지표 정확도로 그대로 이어집니다.</p>
+      </div>
+      <div class="card">
+        <span class="layer-tag" style="background:rgba(184,84,80,.18);color:#e0736e">적재 → (쓰기)</span>
+        <h4 style="margin:12px 0 8px;font-size:16px">엔진이 metric_store 테이블 생성</h4>
+        <p class="muted" style="font-size:13.5px;margin:0">
+          Loader→Planner→Builder→TaskGenerator 가 YAML을 SQL로 컴파일해 Spark로 실행,
+          <code class="inl">insight_product.metric_store_hist</code> (DW 소비 레이어)에 <b>DELETE+INSERT 멱등 적재</b>합니다.
+          카탈로그·Kafka 전송까지 자동.</p>
+      </div>
+    </div>
+    <div class="callout">
+      결과적으로 <code class="inl">metric_store_*</code> 는 <code class="inl">fact_*</code> 와 나란히 <b>소비 레이어의 한 시민</b>입니다.
+      차이는 "사람이 SQL로 만든 집계 마트(fact)" vs "YAML 선언에서 엔진이 자동 생성한 지표 마트(metric_store)".
+      메트릭 스토어 내부 동작은 → <a href="../mart/metric_store/docs/metric_store_overview.html"><b>메트릭 스토어 오버뷰</b></a>.
+    </div>
+  </section>
+
+  <!-- FLOW -->
+  <section id="flow">
+    <h2><span class="num">08</span>종합 흐름 — 원천에서 소비까지</h2>
+    <p class="lead">한 데이터 포인트가 원천에서 대시보드까지 도달하는 전체 경로.</p>
+    <pre><span class="n">[원천 RDB/API]</span>
+     │  (변환 없이 복제)
+     ▼
+<span class="k">ODS</span>  core_ods · timetracking_ods · fins_ods · goal_ods
+     │  (리네이밍 · 타입 · KST · 삭제 플래그 · 통합)  ← 5가지 생성 패턴
+     ▼
+<span class="k">Source</span>  src_*(사건) · dim_*(엔티티)          ┐
+     │  (집계 · 파생)                            │  ⇠ 메트릭 스토어 시맨틱 레이어가
+     ▼                                           │     이 마트들을 "소스"로 선언 (참조)
+<span class="k">소비</span>  fact_*(집계 마트)                        │
+       metric_store_*(엔진이 적재한 지표) ◀──────┘  적재 (YAML→SQL→Spark→멱등 INSERT)
+     │
+     ▼
+<span class="k">Downstream</span>  BI 대시보드(Metabase) · 자동 리포트/Slack · 애드혹 SQL</pre>
+    <div class="callout">
+      <b>표준이 왜 중요한가.</b> 소스 레이어의 그레인·네이밍이 흔들리면 그 위의 fact·metric_store가 모두 흔들립니다.
+      <code class="inl">src</code>/<code class="inl">dim</code> 판별과 네이밍 표준은 단순 규칙이 아니라 <b>상위 지표 정확도의 토대</b>입니다.
+    </div>
+  </section>
+
+  <footer>
+    flex data platform · 데이터 아키텍처 오버뷰<br>
+    원본: <code class="inl" style="font-size:.85em">dags/source/데이터마트표준화가이드.md</code> ·
+    <a href="../mart/metric_store/docs/metric_store_overview.html">메트릭 스토어 오버뷰</a>
+  </footer>
+
+</div>
+</body>
+</html>

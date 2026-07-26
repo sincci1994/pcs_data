@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metric Store — 데이터 엔지니어를 위한 안내</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --border:#2a3140;
+    --ink:#e6edf3; --muted:#9aa7b8; --dim:#6b7684;
+    --accent:#6ea8fe; --accent2:#7ee787;
+    --atomic:#6ea8fe; --derived:#d2a8ff; --extend:#f0a868;
+    --code-bg:#0b0f16;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.7;font-size:15.5px;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px 120px}
+
+  /* header */
+  header.hero{padding:64px 24px 40px;text-align:center;
+    background:radial-gradient(1200px 400px at 50% -80px,rgba(110,168,254,.18),transparent 70%);
+    border-bottom:1px solid var(--border)}
+  .hero .kicker{color:var(--accent);font-weight:700;letter-spacing:.14em;font-size:12.5px;text-transform:uppercase}
+  .hero h1{font-size:40px;margin:12px 0 10px;letter-spacing:-.02em}
+  .hero p{max-width:660px;margin:0 auto;color:var(--muted);font-size:17px}
+  .hero .oneliner{margin-top:22px;display:inline-block;padding:10px 18px;border:1px solid var(--border);
+    border-radius:999px;background:var(--panel);font-family:var(--mono);font-size:13.5px;color:var(--ink)}
+  .hero .oneliner b{color:var(--accent2)}
+
+  /* nav */
+  nav.toc{position:sticky;top:0;z-index:20;background:rgba(13,17,23,.86);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);padding:10px 0}
+  nav.toc ul{max-width:1040px;margin:0 auto;padding:0 24px;list-style:none;display:flex;gap:6px;
+    flex-wrap:wrap;justify-content:center}
+  nav.toc a{font-size:13px;color:var(--muted);padding:5px 11px;border-radius:7px;white-space:nowrap}
+  nav.toc a:hover{color:var(--ink);background:var(--panel2);text-decoration:none}
+
+  section{padding-top:56px}
+  h2{font-size:27px;letter-spacing:-.01em;margin:0 0 6px;display:flex;align-items:center;gap:12px}
+  h2 .num{font-family:var(--mono);font-size:15px;color:var(--accent);border:1px solid var(--border);
+    border-radius:8px;padding:2px 9px;background:var(--panel)}
+  h3{font-size:18.5px;margin:32px 0 10px;color:var(--ink)}
+  .lead{color:var(--muted);font-size:16px;margin:4px 0 20px;max-width:800px}
+  p{margin:12px 0}
+  .muted{color:var(--muted)}
+  code.inl{font-family:var(--mono);font-size:.88em;background:var(--panel2);color:#ffd9a0;
+    padding:1.5px 6px;border-radius:5px;border:1px solid var(--border)}
+
+  /* cards */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px 24px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  /* callout */
+  .callout{border-left:3px solid var(--accent);background:var(--panel2);border-radius:0 10px 10px 0;
+    padding:14px 18px;margin:20px 0;color:var(--muted)}
+  .callout b{color:var(--ink)}
+  .callout.warn{border-color:var(--extend)}
+  .callout.good{border-color:var(--accent2)}
+
+  /* code block */
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:11px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:13px;line-height:1.6;color:#c9d5e3}
+  pre .c{color:#6b7684}      /* comment */
+  pre .k{color:#ff7b72}      /* keyword */
+  pre .s{color:#a5d6ff}      /* string */
+  pre .f{color:#d2a8ff}      /* field/func */
+  pre .n{color:#79c0ff}      /* number/ident */
+  pre .y{color:#7ee787}      /* yaml key */
+
+  /* pipeline */
+  .pipe{display:flex;flex-direction:column;gap:0;margin:26px 0}
+  .stage{display:flex;gap:16px;align-items:flex-start}
+  .stage .rail{display:flex;flex-direction:column;align-items:center;flex:0 0 40px}
+  .stage .dot{width:34px;height:34px;border-radius:50%;background:var(--panel);border:2px solid var(--accent);
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;
+    color:var(--accent);font-size:14px;flex:0 0 auto}
+  .stage .line{width:2px;flex:1;background:var(--border);min-height:22px}
+  .stage:last-child .line{display:none}
+  .stage .body{flex:1;padding-bottom:22px}
+  .stage .body h4{margin:4px 0 4px;font-size:16px}
+  .stage .body .mod{font-family:var(--mono);font-size:12px;color:var(--accent2)}
+  .stage .body p{margin:6px 0 0;color:var(--muted);font-size:14px}
+
+  /* type badges */
+  .tcard{border-radius:14px;padding:20px 22px;border:1px solid var(--border);background:var(--panel)}
+  .tcard.atomic{border-top:3px solid var(--atomic)}
+  .tcard.derived{border-top:3px solid var(--derived)}
+  .tcard.extend{border-top:3px solid var(--extend)}
+  .badge{display:inline-block;font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.05em;
+    padding:3px 9px;border-radius:6px}
+  .badge.atomic{color:var(--atomic);background:rgba(110,168,254,.12)}
+  .badge.derived{color:var(--derived);background:rgba(210,168,255,.12)}
+  .badge.extend{color:var(--extend);background:rgba(240,168,104,.12)}
+  .tcard h4{margin:10px 0 4px;font-size:17px}
+  .tcard .sub{color:var(--dim);font-size:13px;margin-bottom:10px}
+  .tcard ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:13.5px}
+  .tcard ul li{margin:5px 0}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em}
+  td code, th code{font-family:var(--mono);font-size:12.5px;color:#ffd9a0}
+  tbody tr:hover{background:var(--panel2)}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+  .tbl-wrap table{margin:0}
+  .tbl-wrap th{background:var(--panel2);padding:11px 14px}
+  .tbl-wrap td{padding:10px 14px}
+
+  .split{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .chip{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--border);
+    background:var(--panel);border-radius:7px;padding:4px 10px}
+
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14px;margin:10px 0}
+  .kv .k{color:var(--dim);font-family:var(--mono);font-size:12.5px}
+
+  footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--border);color:var(--dim);font-size:13px;text-align:center}
+
+  .two-phase{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+  @media(max-width:820px){.two-phase{grid-template-columns:1fr}}
+  .phase{border:1px solid var(--border);border-radius:12px;padding:18px 20px;background:var(--panel)}
+  .phase .tag{font-family:var(--mono);font-size:11px;letter-spacing:.06em;padding:3px 9px;border-radius:6px;font-weight:700}
+  .phase.parse .tag{color:#7ee787;background:rgba(126,231,135,.12)}
+  .phase.run .tag{color:#f0a868;background:rgba(240,168,104,.12)}
+  .phase h4{margin:12px 0 6px;font-size:16px}
+  .phase p{color:var(--muted);font-size:13.5px;margin:6px 0}
+  .phase ol{margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:13.5px}
+  .phase ol li{margin:6px 0}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="kicker">flex · data platform</div>
+  <h1>Metric Store</h1>
+  <p>회사의 주요 지표를 <b>YAML 한곳에 정의</b>하면, 매일 자동으로 SQL이 생성·실행되어
+     하나의 Iceberg 테이블에 적재되는 <b>지표 계산 파이프라인</b>입니다.</p>
+  <div class="oneliner">YAML 정의 → <b>SQL 자동 생성</b> → Spark 실행 → <b>metric_store_hist</b> 적재</div>
+</header>
+
+<nav class="toc">
+  <ul>
+    <li><a href="#why">왜</a></li>
+    <li><a href="#concept">핵심 컨셉</a></li>
+    <li><a href="#arch">아키텍처</a></li>
+    <li><a href="#types">지표 3유형</a></li>
+    <li><a href="#flow">동작 플로우</a></li>
+    <li><a href="#idempotent">멱등 적재</a></li>
+    <li><a href="#result">결과 테이블</a></li>
+    <li><a href="#dags">DAG 구성</a></li>
+    <li><a href="#add">지표 추가</a></li>
+  </ul>
+</nav>
+
+<div class="wrap">
+
+  <!-- WHY -->
+  <section id="why">
+    <h2><span class="num">00</span>풀려는 문제</h2>
+    <p class="lead">같은 지표를 사람마다 다른 쿼리로 뽑으면 숫자가 갈립니다.</p>
+    <div class="callout">
+      "이번 달 MQL이 몇 개냐"에 <b>대시보드와 분석 노트가 다른 답</b>을 내는 순간,
+      보는 사람은 둘 다 못 믿게 됩니다. 근태·인원·비용 같은 핵심 지표일수록 치명적입니다.
+    </div>
+    <p>Metric Store는 지표의 <b>정의(무엇을·어떤 기준으로·어떤 단위로 집계할지)를 YAML 파일 하나에 유일하게</b> 두고,
+       그 정의로부터 SQL을 자동 생성해 매일 계산·적재합니다. 누구나 같은 정의의 숫자를 봅니다 —
+       <b>SSOT(Single Source of Truth)</b> 원칙입니다.</p>
+  </section>
+
+  <!-- CONCEPT -->
+  <section id="concept">
+    <h2><span class="num">01</span>핵심 컨셉 3가지</h2>
+    <p class="lead">엔지니어가 먼저 잡아야 할 세 가지 멘탈 모델.</p>
+    <div class="grid3">
+      <div class="card">
+        <div class="badge atomic">SSOT</div>
+        <h4 style="margin:10px 0 6px;font-size:16px">사람은 YAML만 만진다</h4>
+        <p class="muted" style="font-size:13.5px;margin:0">
+          지표 정의는 <code class="inl">res/</code> 아래 YAML이 유일한 소스.
+          SQL·테이블·Airflow Task는 <b>전부 코드가 자동 생성</b>합니다. 손으로 쓴 SQL은 없습니다.</p>
+      </div>
+      <div class="card">
+        <div class="badge derived">DECLARATIVE</div>
+        <h4 style="margin:10px 0 6px;font-size:16px">선언형 → 컴파일</h4>
+        <p class="muted" style="font-size:13.5px;margin:0">
+          "무엇을 계산할지"만 선언하면, Loader→Planner→Builder가
+          <b>실행 계획과 SQL 문자열로 컴파일</b>합니다. 계산 순서도 참조 관계에서 자동 도출.</p>
+      </div>
+      <div class="card">
+        <div class="badge extend">IDEMPOTENT</div>
+        <h4 style="margin:10px 0 6px;font-size:16px">지우고 다시 넣기</h4>
+        <p class="muted" style="font-size:13.5px;margin:0">
+          모든 적재는 <b>DELETE 후 INSERT</b>. 같은 날짜를 몇 번 돌려도 결과가 중복되지 않고
+          항상 동일합니다 (멱등성).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="arch">
+    <h2><span class="num">02</span>아키텍처 — YAML이 SQL이 되기까지</h2>
+    <p class="lead">YAML을 읽어 SQL로 바꾸고 Airflow Task로 연결하는 과정은
+       5개 처리 단계로 이뤄집니다. 단계 사이에 오가는 데이터는 <code class="inl">ExecutionPlan</code> 하나로 표현됩니다.</p>
+
+    <div class="pipe">
+      <div class="stage">
+        <div class="rail"><div class="dot">1</div><div class="line"></div></div>
+        <div class="body">
+          <div class="mod">res/*.yaml</div>
+          <h4>YAML 정의 — 사람이 수정하는 유일한 대상</h4>
+          <p><code class="inl">sources/</code> (원본 테이블·컬럼) · <code class="inl">metrics/</code> (지표 계산식·축·표시정보)
+             · <code class="inl">dimensions.yaml</code> · <code class="inl">extend_attributes.yaml</code> · <code class="inl">domains.yaml</code></p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="rail"><div class="dot">2</div><div class="line"></div></div>
+        <div class="body">
+          <div class="mod">YamlMetadataLoader</div>
+          <h4>Loader — Load → Lookup → Validate</h4>
+          <p>YAML을 모델로 읽고(<code class="inl">from_yaml</code>), 조회용 색인을 만들고(alias/파생축/암호화/카테고리),
+             모델 간 규칙을 검증합니다. 잘못된 정의는 여기서 걸립니다.</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="rail"><div class="dot">3</div><div class="line"></div></div>
+        <div class="body">
+          <div class="mod">MetricStorePlanner → ExecutionPlan</div>
+          <h4>Planner — 무엇을·어떤 순서로 계산할지 결정</h4>
+          <p>time_unit별 그룹화 + 참조관계 <b>위상정렬(depth)</b> + 비용 기반 배치 분배 + chunk 수 산출을
+             <b>결정적으로</b> 수행. 결과는 값이 안 바뀌는(frozen) <code class="inl">ExecutionPlan</code> 객체.</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="rail"><div class="dot">4</div><div class="line"></div></div>
+        <div class="body">
+          <div class="mod">Source / Atomic / Derived / Extend / Catalog SqlBuilder</div>
+          <h4>SqlBuilder — Plan 좌표대로 SQL 문자열 생성</h4>
+          <p>단위별 Builder가 중간 조회 SQL, 지표×축 집계 SQL(<code class="inl">UNION ALL</code>),
+             파생/기간비교 SQL을 만듭니다. <code class="inl">SqlUploader</code>가 이걸 S3에 업로드
+             (실행 인자 길이 제한 회피).</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="rail"><div class="dot">5</div></div>
+        <div class="body">
+          <div class="mod">MetricStoreTaskGenerator → Spark → Iceberg</div>
+          <h4>TaskGenerator — Airflow Task로 실체화 &amp; 연결</h4>
+          <p><code class="inl">build_all → wire_dependencies → wire_downstream</code>.
+             Plan의 unit/edge를 <b>Task 단위 의존성</b>으로 연결하고, Spark가 SQL을 실행해
+             <code class="inl">insight_product.metric_store_hist</code>에 적재합니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout good">
+      <b>핵심 계약(contract) = ExecutionPlan.</b> 4종 실행 단위(AtomicUnit / DerivedUnit / ExtendAtomicUnit / ExtendDerivedUnit)와
+      2종 기간비교 연결(cross-extend edge), chunk 크기를 담습니다.
+      Planner 이후 모든 단계가 이 한 객체만 보고 동작합니다.
+    </div>
+
+    <h3>모듈 지도</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>모듈</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>YamlMetadataLoader</code></td><td>YAML → 모델 로드 + 조회 색인 + cross-model 검증</td></tr>
+          <tr><td><code>MetricStorePlanner</code></td><td>loader + time_unit + 분배정책 → ExecutionPlan (결정적)</td></tr>
+          <tr><td><code>ExecutionPlan</code></td><td>단계 간 유일한 데이터 계약 (frozen dataclass)</td></tr>
+          <tr><td><code>*SqlBuilder</code></td><td>Source / Atomic / Derived / Extend / Catalog SQL 생성</td></tr>
+          <tr><td><code>MetricStoreSqlUploader</code></td><td>Plan 좌표대로 SQL 빌드 → S3 업로드</td></tr>
+          <tr><td><code>MetricStoreTaskGenerator</code></td><td>Plan → Airflow Task 생성 + 의존성 연결</td></tr>
+          <tr><td><code>kafka_export_builder</code></td><td>각 적재 DAG 안의 <code>kafka_upsert</code> Task 그룹 빌더</td></tr>
+          <tr><td><code>metric_cli.py</code></td><td>검증·조회·미리보기 도구 (<code>validate</code>/<code>list</code>/<code>show</code>/<code>waves</code>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TYPES -->
+  <section id="types">
+    <h2><span class="num">03</span>지표 3유형 — YAML의 <code class="inl" style="font-size:.7em">type</code>이 곧 유형</h2>
+    <p class="lead">지표는 만드는 방식에 따라 세 가지로 나뉩니다. Planner가 유형별로 다른 실행 단위를 만듭니다.</p>
+
+    <div class="grid3">
+      <div class="tcard atomic">
+        <span class="badge atomic">ATOMIC</span>
+        <h4>기본 집계</h4>
+        <div class="sub">원본 테이블에서 직접 계산</div>
+        <ul>
+          <li>컬럼을 <code class="inl">SUM/COUNT/AVG</code> 등으로 집계</li>
+          <li>부서별·유저별·전사 등 여러 축으로 동시 집계</li>
+          <li>조건 필터(<code class="inl">condition</code>) 가능</li>
+        </ul>
+      </div>
+      <div class="tcard derived">
+        <span class="badge derived">DERIVED</span>
+        <h4>파생 지표</h4>
+        <div class="sub">이미 계산된 지표들을 조합</div>
+        <ul>
+          <li>다른 지표 키를 쓴 계산식 (<code class="inl">A / B</code>)</li>
+          <li>same-dim(같은 축) / rollup(상위 축 합산) / broadcast(전사값 붙이기)</li>
+          <li>참조 관계로 <b>계산 순서 자동 결정</b></li>
+        </ul>
+      </div>
+      <div class="tcard extend">
+        <span class="badge extend">EXTEND</span>
+        <h4>기간 비교</h4>
+        <div class="sub">적재된 지표에 비교값을 덧붙임</div>
+        <ul>
+          <li>전기 대비(PREV) · 이동평균(LAST) · 전년(YOY)</li>
+          <li><code class="inl">extend_attributes</code>만 지정하면 자동 계산</li>
+          <li>원값과 다른 <code class="inl">attribute_type</code>으로 저장</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>예시로 보는 세 유형</h3>
+    <pre><span class="c"># ATOMIC — 원본 src_user_work 에서 직접 집계</span>
+<span class="y">- key:</span> WORKING_HOURS
+  <span class="y">type:</span> ATOMIC
+  <span class="y">source:</span> src_user_work
+  <span class="y">formula:</span> <span class="s">"SUM(total_working_minutes) / 60.0"</span>
+  <span class="y">dimensions:</span> [ [department_id], [department_id, user_id], [customer_id] ]
+  <span class="y">extend_attributes:</span> [ LAST4_AVG, LAST4_AVG_DIFF ]   <span class="c"># ← EXTEND 자동 부착</span>
+
+<span class="c"># DERIVED — 이미 계산된 두 지표를 같은 축에서 나눔 (same-dim)</span>
+<span class="y">- key:</span> WORKING_HOURS_AVG
+  <span class="y">type:</span> DERIVED
+  <span class="y">formula:</span> <span class="s">"WORKING_HOURS / WORKING_USER_COUNT"</span>   <span class="c"># 인당 평균 근무시간</span>
+  <span class="y">dimensions:</span> [ [department_id], [customer_id] ]
+
+<span class="c"># DERIVED · broadcast — 전사 평균을 각 부서에 붙여 "전사 대비 차이"</span>
+<span class="y">- key:</span> AGE_AVG_TOTAL_DIFF
+  <span class="y">type:</span> DERIVED
+  <span class="y">formula:</span> <span class="s">"AGE_AVG - AGE_AVG_TOTAL"</span>
+  <span class="y">cross_dimensions:</span>
+    <span class="y">- source:</span> [customer_id]                <span class="c"># 전사 레벨</span>
+      <span class="y">targets:</span> [ [direct_department_id] ]
+      <span class="y">metrics:</span> [ { key: AGE_AVG, alias: AGE_AVG_TOTAL } ]</pre>
+
+    <div class="callout warn">
+      <b>축 처리(same-dim / rollup / broadcast / 구성비)를 틀리면 빌드는 통과해도 값이 조용히 어긋납니다.</b>
+      특히 창 함수의 <code class="inl">PARTITION BY</code>에서 <code class="inl">customer_id</code>를 빠뜨리면
+      여러 고객사가 섞여 합산·순위됩니다. 패턴 결정 절차는 <code class="inl">docs/PATTERNS.md</code> 참고.
+    </div>
+  </section>
+
+  <!-- FLOW -->
+  <section id="flow">
+    <h2><span class="num">04</span>동작 플로우 — 두 개의 시간대</h2>
+    <p class="lead">Metric Store를 이해하는 핵심: 파이프라인은 <b>DAG parse time</b>과 <b>Runtime</b>에서
+       하는 일이 다릅니다.</p>
+
+    <div class="two-phase">
+      <div class="phase parse">
+        <span class="tag">DAG PARSE TIME</span>
+        <h4>계획을 세운다 (모든 워커가 반복 실행)</h4>
+        <p>Airflow가 DAG 파일을 파싱할 때마다 실행됩니다. <b>SQL을 만들지도, 데이터를 건드리지도 않습니다.</b>
+           Task 그래프의 모양만 결정합니다.</p>
+        <ol>
+          <li>Loader가 YAML을 읽어 검증</li>
+          <li>Planner가 <code class="inl">ExecutionPlan</code> 산출 (depth·배치·chunk)</li>
+          <li>TaskGenerator가 Task를 만들고 의존성을 wire</li>
+        </ol>
+      </div>
+      <div class="phase run">
+        <span class="tag">RUNTIME (DAG run)</span>
+        <h4>실제로 계산한다 (하루 1회)</h4>
+        <p>스케줄이 돌 때 실행됩니다. 여기서 <b>SQL이 생성·업로드되고 Spark가 실제로 계산·적재</b>합니다.</p>
+        <ol>
+          <li><code class="inl">gen_sql</code>: Uploader가 모든 SQL을 빌드해 S3 업로드</li>
+          <li>atomic → derived(depth순) → extend Task가 Spark 실행</li>
+          <li><code class="inl">kafka_upsert</code> + <code class="inl">clean_sql</code> 병렬 마무리</li>
+        </ol>
+      </div>
+    </div>
+
+    <h3>Runtime Task 그래프</h3>
+    <pre><span class="k">start</span>
+  → <span class="f">gen_sql</span>                     <span class="c"># SqlUploader: 모든 SQL 빌드 → S3</span>
+  → <span class="f">atomic_{source}</span>            <span class="c"># 소스당 1 Task (소스캐시 + 그룹 UNION ALL → write)</span>
+  → <span class="f">derived_batch_{idx}</span>        <span class="c"># depth_0, depth_1 ... depth_K 순서 (참조 순서)</span>
+  → <span class="f">extend_atomic_{source}</span>     <span class="c"># atomic 종료 직후</span>
+    <span class="f">extend_derived_batch_{d}_{i}</span> <span class="c"># 해당 derived 배치 종료 직후</span>
+  → [ <span class="f">kafka_upsert</span> , <span class="f">clean_sql</span> ]  <span class="c"># leaf 이후 2분기 병렬</span>
+  → <span class="k">end</span></pre>
+
+    <div class="callout">
+      <b>TaskGroup은 화면상 시각적 묶음일 뿐, 그룹 간 의존성은 없습니다.</b>
+      모든 연결이 <b>개별 Task 단위</b>로 명시돼 있어(예: <code class="inl">atomic_{source} → derived_batch_{idx}</code>),
+      같은 depth의 배치 중 일부가 먼저 끝나면 뒤 Task가 나머지를 기다리지 않고 진행됩니다.
+    </div>
+  </section>
+
+  <!-- IDEMPOTENT -->
+  <section id="idempotent">
+    <h2><span class="num">05</span>멱등 적재 — DELETE 범위가 충돌을 막는다</h2>
+    <p class="lead">모든 Task는 "해당 범위를 지우고 다시 넣는(DELETE + INSERT)" 방식.
+       지우는 범위를 <code class="inl">metric_key</code> + <code class="inl">attribute_type</code>으로 쪼개
+       Task 간 충돌을 원천 차단합니다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>단계</th><th>작업 단위</th><th>DELETE 범위</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge atomic" style="font-size:10px">ATOMIC</span></td>
+              <td>소스당 1 Task <code>atomic_{source}</code></td>
+              <td><code>metric_key IN (...) + attribute_type='VALUE'</code></td></tr>
+          <tr><td><span class="badge derived" style="font-size:10px">DERIVED</span></td>
+              <td>depth 안 배치당 1 Task <code>derived_batch_{idx}</code></td>
+              <td><code>metric_key IN (...) + attribute_type='VALUE'</code></td></tr>
+          <tr><td><span class="badge extend" style="font-size:10px">EXTEND</span></td>
+              <td>소스/배치당 1 Task <code>extend_*</code></td>
+              <td><code>metric_key IN (...) + attribute_type != 'VALUE'</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:14px">
+      → 원값(<code class="inl">VALUE</code>)과 기간비교값(<code class="inl">PREV1_DIFF</code> 등)이 <code class="inl">attribute_type</code>으로 분리돼
+      ATOMIC/DERIVED Task와 EXTEND Task가 같은 <code class="inl">metric_key</code>라도 서로 다른 행을 지웁니다.
+      테이블은 <code class="inl">PARTITIONED BY (part_date, time_unit, metric_key)</code>라 파티션 단위로도 격리됩니다.</p>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result">
+    <h2><span class="num">06</span>결과 — 모든 지표가 한 테이블에</h2>
+    <p class="lead">모든 지표가 <code class="inl">insight_product.metric_store_hist</code> 하나에 통합 적재됩니다.
+       한 행 = "어떤 지표를, 어떤 축으로, 언제, 얼마".</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>컬럼</th><th>설명</th><th>예시</th></tr></thead>
+        <tbody>
+          <tr><td><code>base_date</code></td><td>기준 일자 (주간이면 그 주의 시작일)</td><td>2025-01-06</td></tr>
+          <tr><td><code>customer_id</code></td><td>고객사 ID — <b>모든 지표는 고객사 단위</b></td><td>12345</td></tr>
+          <tr><td><code>metric_group_key</code></td><td>지표 그룹</td><td>working_hours</td></tr>
+          <tr><td><code>metric_key</code></td><td>지표 키</td><td>WORKING_HOURS</td></tr>
+          <tr><td><code>dimension_name_key</code></td><td>분석 축 이름</td><td>department_id</td></tr>
+          <tr><td><code>dimension_value_key</code></td><td>분석 축 값</td><td>100</td></tr>
+          <tr><td><code>dimension_map</code></td><td>축 조합 전체 map</td><td>{department_id:100}</td></tr>
+          <tr><td><code>encrypted_dimension_map</code></td><td>dimension_map JSON을 암호화한 문자열</td><td>—</td></tr>
+          <tr><td><code>attribute_type</code></td><td>값의 종류</td><td>VALUE, LAST4_AVG, PREV1_DIFF</td></tr>
+          <tr><td><code>value</code></td><td>계산 결과</td><td>42.50</td></tr>
+          <tr><td><code>source_table_name</code></td><td>원본 소스 테이블</td><td>timetracking_mart.src_user_work</td></tr>
+          <tr><td><code>id</code></td><td>비즈니스 키 해시 (증분·변경 감지용)</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:13.5px;margin-top:8px">
+      <code class="inl">PARTITIONED BY (part_date, time_unit, metric_key)</code></p>
+
+    <h3>조회 예시</h3>
+    <pre><span class="c">-- 부서별 주간 근무시간 (한 고객사)</span>
+<span class="k">SELECT</span> dimension_value_key <span class="k">AS</span> department_id, value <span class="k">AS</span> working_hours
+<span class="k">FROM</span> metric_store_hist
+<span class="k">WHERE</span> metric_key = <span class="s">'WORKING_HOURS'</span>
+  <span class="k">AND</span> customer_id = <span class="n">12345</span>            <span class="c">-- 빠뜨리면 여러 고객사가 섞임</span>
+  <span class="k">AND</span> dimension_name_key = <span class="s">'department_id'</span>
+  <span class="k">AND</span> attribute_type = <span class="s">'VALUE'</span>       <span class="c">-- 원값</span>
+  <span class="k">AND</span> time_unit = <span class="s">'W'</span>
+  <span class="k">AND</span> base_date = <span class="s">'2025-01-06'</span>
+
+<span class="c">-- 최근 4주 평균 대비 증감 (EXTEND)</span>
+<span class="k">SELECT</span> dimension_value_key, value <span class="k">AS</span> diff_from_avg
+<span class="k">FROM</span> metric_store_hist
+<span class="k">WHERE</span> metric_key = <span class="s">'WORKING_HOURS'</span>
+  <span class="k">AND</span> attribute_type = <span class="s">'LAST4_AVG_DIFF'</span>
+  <span class="k">AND</span> time_unit = <span class="s">'W'</span></pre>
+
+    <h3>곁들여 만들어지는 테이블</h3>
+    <div class="grid2">
+      <div class="card">
+        <h4 style="margin:0 0 8px;font-size:15px">카탈로그 테이블 <span class="chip" style="margin-left:6px">SCD Type 2</span></h4>
+        <p class="muted" style="font-size:13.5px;margin:0 0 8px">
+          YAML의 표시명·단위·계산식이 자동 동기화됩니다. 값이 바뀌면 지우지 않고
+          <code class="inl">is_current</code>/<code class="inl">valid_start_at</code>/<code class="inl">valid_end_at</code>로 이력을 남깁니다.</p>
+        <div class="split">
+          <span class="chip">metric_store_domains</span>
+          <span class="chip">metric_store_metric_groups</span>
+          <span class="chip">metric_store_metrics</span>
+          <span class="chip">metric_store_dimensions</span>
+          <span class="chip">metric_store_extend_attributes</span>
+        </div>
+      </div>
+      <div class="card">
+        <h4 style="margin:0 0 8px;font-size:15px">부가 테이블</h4>
+        <div class="kv">
+          <div class="k">dimension_<br>value_mapping</div>
+          <div>ID형 축의 (customer_id, 축 키) → 실제 값 매핑. 매일 통째로 새로 씀.</div>
+          <div class="k">observability_<br>daily</div>
+          <div>(지표·속성·고객사·단위)별 적재 상태 집계 — 행수·0비율·정체·변동성 등 DQ 지표. AI 에이전트의 지표 선택·노출 필터에 사용.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <b>외부 전송(Kafka).</b> 각 적재 DAG의 <code class="inl">kafka_upsert</code> 그룹이 해당 time_unit 전체 스냅샷을
+      <b>CloudEvent Binary</b> 형식으로 Kafka에 전송합니다. 카탈로그·축 매핑도 각자 DAG에서 Kafka로 내보냅니다.
+    </div>
+  </section>
+
+  <!-- DAGS -->
+  <section id="dags">
+    <h2><span class="num">07</span>DAG 구성</h2>
+    <p class="lead">적재 4개(W/M/Q/Y) + 유지보수·카탈로그·축매핑·초기적재.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>DAG</th><th>Schedule</th><th>단위</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>mart_metric_store_weekly_6h_30m_v1</code></td><td>30 6 * * *</td><td>W</td><td>주간 적재 + kafka</td></tr>
+          <tr><td><code>mart_metric_store_monthly_6h_30m_v1</code></td><td>30 6 * * *</td><td>M</td><td>월간 적재 + kafka</td></tr>
+          <tr><td><code>mart_metric_store_quarterly_6h_30m_v1</code></td><td>30 6 * * *</td><td>Q</td><td>분기 적재 + kafka</td></tr>
+          <tr><td><code>mart_metric_store_yearly_6h_30m_v1</code></td><td>30 6 * * *</td><td>Y</td><td>연간 적재 + kafka</td></tr>
+          <tr><td><code>..._hist_maintenance_7h_30m_v1</code></td><td>30 7 * * *</td><td>—</td><td>4 적재 DAG의 end 대기 후 관측통계 집계 + OPTIMIZE + VACUUM</td></tr>
+          <tr><td><code>mart_metric_store_catalog_7h</code></td><td>0 7 * * *</td><td>—</td><td>YAML 변경 감지 → 카탈로그 동기화 + Kafka</td></tr>
+          <tr><td><code>..._dimension_value_mapping_7h</code></td><td>0 7 * * *</td><td>—</td><td>축 값 매핑 스냅샷 + Kafka</td></tr>
+          <tr><td><code>export_metric_store_migration</code></td><td>수동</td><td>—</td><td>초기 적재/재적재용 전체 스냅샷 Kafka 전송</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      유지보수(관측통계 + OPTIMIZE + VACUUM)를 <b>별도 DAG로 분리</b>한 이유:
+      4개 적재 DAG와 같은 테이블에 <b>동시 커밋하면 Iceberg commit 충돌</b>이 나기 때문.
+      적재 DAG들의 <code class="inl">end</code>를 <code class="inl">ExternalTaskSensor</code>로 기다린 뒤 07:30에 1회 실행합니다.
+    </div>
+  </section>
+
+  <!-- ADD -->
+  <section id="add">
+    <h2><span class="num">08</span>새 지표 추가 흐름</h2>
+    <p class="lead">엔지니어/분석가가 지표 하나를 추가할 때. 사람이 만지는 건 YAML과 CLI뿐입니다.</p>
+    <div class="pipe" style="margin-top:16px">
+      <div class="stage"><div class="rail"><div class="dot" style="border-color:var(--accent2);color:var(--accent2)">1</div><div class="line"></div></div>
+        <div class="body"><h4>원본 소스 확인</h4><p><code class="inl">res/sources/</code>에 쓸 테이블이 있으면 통과. 없으면 <code class="inl">_sample.yaml</code> 복사해 소스 정의 추가 (grain·columns·joins).</p></div></div>
+      <div class="stage"><div class="rail"><div class="dot" style="border-color:var(--accent2);color:var(--accent2)">2</div><div class="line"></div></div>
+        <div class="body"><h4>계산 패턴 판단</h4><p><code class="inl">docs/PATTERNS.md</code>의 결정 절차로 ATOMIC/DERIVED·축 처리·formula 모양을 정함.</p></div></div>
+      <div class="stage"><div class="rail"><div class="dot" style="border-color:var(--accent2);color:var(--accent2)">3</div><div class="line"></div></div>
+        <div class="body"><h4>지표 정의 작성</h4><p><code class="inl">res/metrics/</code>에 <code class="inl">key·type·formula·time_units·cast_type·dimensions·semantic</code> 작성.</p></div></div>
+      <div class="stage"><div class="rail"><div class="dot" style="border-color:var(--accent2);color:var(--accent2)">4</div><div class="line"></div></div>
+        <div class="body"><h4>카탈로그 등록 (신규 축일 때만)</h4><p>새 분석 축·기간비교 속성이면 <code class="inl">dimensions.yaml</code>/<code class="inl">extend_attributes.yaml</code>에 등록. 기존 것만 쓰면 생략.</p></div></div>
+      <div class="stage"><div class="rail"><div class="dot" style="border-color:var(--accent2);color:var(--accent2)">5</div></div>
+        <div class="body"><h4>검증</h4><p><code class="inl">metric_cli.py validate</code>로 오류 확인, <code class="inl">show</code>로 실제 생성 SQL을 눈으로 검토, <code class="inl">waves</code>로 계산 순서 확인.</p></div></div>
+    </div>
+
+    <pre><span class="c"># 검증·미리보기 CLI</span>
+python metric_cli.py <span class="f">validate</span> --metric WORKING_HOURS   <span class="c"># 메타/컬럼/참조/문법 검증</span>
+python metric_cli.py <span class="f">show</span>     --metric WORKING_HOURS   <span class="c"># 생성될 실제 SQL 확인</span>
+python metric_cli.py <span class="f">waves</span>    --group working_hours     <span class="c"># DERIVED 계산 순서(depth)</span></pre>
+
+    <div class="callout good">
+      상세 문서: <code class="inl">docs/SOURCE.md</code> (소스) · <code class="inl">docs/METRIC.md</code> (지표) ·
+      <code class="inl">docs/CATALOG.md</code> (축·도메인) · <code class="inl">docs/PATTERNS.md</code> (패턴 선택) ·
+      <code class="inl">docs/RULE.md</code> (검증) · <code class="inl">docs/ARCHITECTURE.md</code> (내부 구조).
+    </div>
+  </section>
+
+  <footer>
+    flex data platform · Metric Store overview<br>
+    원본 문서: <code class="inl" style="font-size:.85em">dags/mart/metric_store/README.md</code> 및 <code class="inl" style="font-size:.85em">docs/</code>
+  </footer>
+
+</div>
+</body>
+</html>
